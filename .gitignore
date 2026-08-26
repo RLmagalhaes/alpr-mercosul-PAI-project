@@ -1,0 +1,19 @@
+# Dados e modelos ficam no Google Drive — link no README
+dados/
+modelos/
+*.pt
+*.keras
+*.h5
+*.onnx
+runs/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Sistema
+.DS_Store
