@@ -68,18 +68,42 @@ Trabalho final de pós-graduação em Processamento e Análise de Imagens.
 
 ## Ambiente de execução
 
-O treino roda em **GPU do Google Colab**, acessada pela **Colab CLI** — não há GPU local (MacBook Air, Apple Silicon).
+O treino roda em **GPU do Google Colab**, acessada pela **Colab CLI** — não há GPU local (MacBook Air, Apple Silicon). A CLI foi instalada via `uv tool install google-colab-cli` e vive fora do venv do projeto.
+
+**A referência completa da CLI está em `docs/COLAB_SKILL.md`** (gerada por `colab skill`). Consulte esse arquivo antes de usar qualquer comando que não esteja na lista abaixo.
+
+Comandos verificados neste ambiente:
 
 ```bash
-pip install google-colab-cli     # uma vez
-
-colab new --gpu t4               # provisiona o runtime
-colab install ultralytics        # instala pacotes no runtime remoto
-colab exec -f notebooks/02_treino.ipynb    # executa .py ou .ipynb remotamente
-colab download modelos/          # traz os artefatos de volta
-colab log                        # salva o log da execução como .ipynb
-colab stop                       # encerra (faça sempre ao fim da sessão)
+colab new                # cria a sessão (provisiona a VM)
+colab sessions           # lista sessões ativas
+colab status             # estado da sessão atual
+colab drivemount         # monta o Google Drive na VM
+colab install ultralytics tensorflow    # instala pacotes na VM
+colab upload arquivo.py  # envia arquivo local para a VM
+colab ls                 # lista arquivos na VM
+colab download modelos/  # traz artefatos de volta para o Mac
+colab log                # histórico da sessão
+colab restart-kernel     # reinicia o kernel sem perder a VM
+colab stop               # encerra a sessão — SEMPRE ao fim do dia
+colab version            # versão da CLI (não existe --version)
 ```
+
+**Executar código — duas formas:**
+
+```bash
+echo "print('oi')" | colab exec           # código pela entrada padrão (stdin)
+colab exec -f notebooks/01_dados.ipynb    # arquivo .py ou .ipynb
+colab run script.py                       # roda em VM nova e libera ao terminar
+```
+
+`colab exec` **não aceita código como argumento posicional** — ou vem por stdin, ou por `-f`.
+
+**Regras de uso nesta máquina:**
+
+- Sempre `colab stop` ao encerrar a sessão do dia: runtime parado não consome cota.
+- Antes de um treino longo, `colab status` para confirmar que a VM está viva.
+- Prefira `colab exec -f` com notebooks versionados no repositório, em vez de código solto por stdin — assim o que rodou fica registrado no Git.
 
 **Se a Colab CLI não funcionar na conta gratuita:** o plano B é o Colab no navegador. Nesse caso, entregue cada bloco de código pronto para colar numa célula, e o Raphael cola a saída de volta para você diagnosticar. O fluxo do roteiro já prevê isso.
 

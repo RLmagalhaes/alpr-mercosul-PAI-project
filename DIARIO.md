@@ -26,6 +26,17 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 
 ## Dia 0 — Preparação ✅
 
+**Datasets**
+
+- Caracteres: project-swcsj/license-plate-character-extraction v2 (Roboflow)
+  - 36 classes (0-9, A-Z), 4711/144/36 imagens, 640x640 px
+  - Mediana de 7 caixas por imagem = recortes de placa com caracteres anotados
+  - ~33 mil caracteres rotulados no total
+  - PENDÊNCIA: redividir 70/15/15 POR IMAGEM (split original é 97/3/0.7)
+  - ATENÇÃO: imagens em 640x640, verificar se os caracteres estão deformados
+
+- Detecção: trafficbr/vehicle-plate-color v2 (Roboflow) — 12780/960/257 imagens, classe única "plate", fotos de veículo inteiro (placas Mercosul BR). Salvo em `dados/deteccao/vehicle-plates/`.
+
 **Feito**
 
 - Repositório criado com a estrutura de pastas e os módulos base em `src/`.
@@ -34,11 +45,11 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 
 **Pendências antes do Dia 1**
 
-- [ ] Testar a Colab CLI na conta gratuita: `pip install google-colab-cli && colab new --gpu t4`
-- [ ] Baixar o dataset do Roboflow **com os caracteres anotados** ([License Plate Recognition](https://universe.roboflow.com/roboflow-universe-projects/license-plate-recognition-rxg4e))
-- [ ] Solicitar o RodoSol-ALPR (liberação leva de 1 a 5 dias úteis)
-- [ ] `git init` e primeiro commit
-- [ ] Rodar `pytest tests/` e ver os testes passando
+- [x] Colab CLI testada (`uv tool install google-colab-cli` + `colab new --gpu t4`) — sessão T4 criada e parada com sucesso.
+- [x] Dataset de caracteres baixado (ver `dados/caracteres/` acima).
+- [x] RodoSol-ALPR: **decisão** — não solicitar, sem tempo pra esperar a liberação (1-5 dias úteis). Projeto segue com o dataset de detecção do Roboflow (`trafficbr/vehicle-plate-color`).
+- [x] `git init` e primeiro commit feitos (`58e53e2`).
+- [x] `pytest tests/` — 14 testes passaram.
 
 **Próximo passo:** Dia 1 — ambiente, dados e detector treinado.
 
