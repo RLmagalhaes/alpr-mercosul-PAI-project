@@ -4,7 +4,7 @@
 > Ao iniciar uma sessão, leia este arquivo antes de qualquer outra coisa.
 
 **Prazo de entrega:** _(preencher a data)_
-**Onde parei:** Dia 0 concluído — estrutura criada, projeto ainda não iniciado.
+**Onde parei:** Dia 0 100% concluído — ambiente instalado, testes passando (14), Colab CLI testada, datasets de caracteres e detecção prontos, RodoSol descartado por decisão, repositório no GitHub sincronizado. Pronto pra começar o Dia 1.
 
 ---
 
