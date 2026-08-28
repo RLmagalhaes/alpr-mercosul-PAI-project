@@ -60,19 +60,29 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 **Objetivo:** um modelo YOLO que encontra placas em fotos.
 
 **O que foi feito**
-_(preencher)_
+- Ambiente Colab configurado via Colab CLI (`colab new -s dia1 --gpu T4`), Drive montado, ultralytics instalado.
+- Dataset de deteccao baixado direto no Colab (trafficbr/vehicle-plate-color v2), salvo local na VM (`/content/dados/deteccao`) em vez do Drive — escrever milhares de arquivos pequenos direto no Drive trava o kernel (mount em rede).
+- Inventario do dataset gerado (ver tabela abaixo) e galeria de 6 amostras com bbox conferida visualmente — anotacoes corretas.
+- Ensaio de 3 epocas rodado com sucesso (script `notebooks/treinar_ensaio.py`, via subprocess em background pra nao travar o CLI em treinos longos).
 
 **Métricas obtidas**
-_(preencher — nº de imagens por partição, área média da placa em % da imagem, mAP do treino)_
+- Inventario: train 12780 imagens/13386 caixas (area media da placa 5,73% da foto), valid 960/995 (4,97%), test 257/268 (5,86%).
+- Ensaio (3 epocas, yolo11n.pt) — preliminar, so pra validar que o pipeline funciona:
+  - epoca 3: mAP50 = 0,99 · mAP50-95 = 0,773 · precisao = 0,980 · recall = 0,954
+  - Numero real fica pro treino completo (40 epocas); esse aqui e so um sinal de que o dataset/setup estao bons.
 
 **Decisões**
-_(preencher — qual dataset, qual modelo base, quantas épocas e por quê)_
+- Dataset de deteccao: `trafficbr/vehicle-plate-color` v2 (Roboflow) em vez do sugerido originalmente no roteiro — 1 classe ("plate"), fotos de veiculo inteiro, placas Mercosul BR.
+- Modelo base: `yolo11n.pt` (nano), como no roteiro.
+- Dados brutos (imagens) ficam no disco local da VM, nao no Drive — persistem so durante a sessao, mas o download do Roboflow e rapido o suficiente pra refazer a cada sessao nova. So os resultados (pesos, figuras, tabelas) vao pro Drive.
+- RodoSol-ALPR descartado (ver Dia 0) — segue so com este dataset.
 
 **Pendências**
-_(preencher)_
+- Rodar o treino completo (40 epocas, `save_period=5`, `patience=10`).
+- Copiar pesos e `results.png` pro Drive e olhar as curvas (etapa 1.7).
 
 **Próximo passo**
-_(preencher)_
+- Lançar o treino completo em background e acompanhar o log.
 
 ---
 
