@@ -21,3 +21,6 @@ venv/
 
 # Lock files do git que essa ponte nao consegue apagar (pode deletar manualmente)
 _to_delete/
+
+# Preview local de imagens do Colab (espelho temporario, nao e entregavel)
+_preview/
