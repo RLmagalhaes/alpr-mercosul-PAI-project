@@ -4,7 +4,7 @@
 > Ao iniciar uma sessão, leia este arquivo antes de qualquer outra coisa.
 
 **Prazo de entrega:** _(preencher a data)_
-**Onde parei:** Dia 0 100% concluído — ambiente instalado, testes passando (14), Colab CLI testada, datasets de caracteres e detecção prontos, RodoSol descartado por decisão, repositório no GitHub sincronizado. Pronto pra começar o Dia 1.
+**Onde parei:** Dia 1 concluído — detector YOLO11n treinado (40 épocas completas via checkpoint + resume no Drive). Métricas finais: mAP50 = 0,994 · mAP50-95 = 0,851 · precisão = 0,987 · recall = 0,979. Pesos em `modelos/detector` (Drive). Pronto pra começar o Dia 2 (avaliação da detecção e recorte das placas).
 
 ---
 
@@ -14,8 +14,8 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 
 | Métrica | Meta | Obtido | Dia |
 | --- | --- | --- | --- |
-| mAP@0.5 (detecção) | > 0,90 | — | 1–2 |
-| mAP@0.5:0.95 | — | — | 2 |
+| mAP@0.5 (detecção) | > 0,90 | 0,994 (val, no treino — falta medir no test no Dia 2) | 1 |
+| mAP@0.5:0.95 | — | 0,851 (val, no treino — falta medir no test no Dia 2) | 1 |
 | Acurácia por caractere (CNN, teste) | > 0,95 | — | 4 |
 | Acurácia por placa — CNN sozinha | — | — | 5 |
 | Acurácia por placa — CNN + regra | > 0,80 | — | 5 |
@@ -55,7 +55,7 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 
 ---
 
-## Dia 1 — Ambiente, dados e detector treinado
+## Dia 1 — Ambiente, dados e detector treinado ✅
 
 **Objetivo:** um modelo YOLO que encontra placas em fotos.
 
@@ -64,25 +64,29 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 - Dataset de deteccao baixado direto no Colab (trafficbr/vehicle-plate-color v2), salvo local na VM (`/content/dados/deteccao`) em vez do Drive — escrever milhares de arquivos pequenos direto no Drive trava o kernel (mount em rede).
 - Inventario do dataset gerado (ver tabela abaixo) e galeria de 6 amostras com bbox conferida visualmente — anotacoes corretas.
 - Ensaio de 3 epocas rodado com sucesso (script `notebooks/treinar_ensaio.py`, via subprocess em background pra nao travar o CLI em treinos longos).
+- Treino completo (40 epocas, `yolo11n.pt`, `patience=10`) rodado via `notebooks/treinar_detector.py`, com checkpoint periodico (`last.pt` copiado pro Drive a cada 180s) e retomada automatica (`resume=True`) apos quedas de sessao — a sessao gratuita do Colab caiu varias vezes ao longo do treino, mas nenhum progresso foi perdido gracas ao checkpoint. Treino concluido nas 40 epocas configuradas, pesos finais copiados pra `modelos/detector` no Drive.
 
 **Métricas obtidas**
 - Inventario: train 12780 imagens/13386 caixas (area media da placa 5,73% da foto), valid 960/995 (4,97%), test 257/268 (5,86%).
 - Ensaio (3 epocas, yolo11n.pt) — preliminar, so pra validar que o pipeline funciona:
   - epoca 3: mAP50 = 0,99 · mAP50-95 = 0,773 · precisao = 0,980 · recall = 0,954
-  - Numero real fica pro treino completo (40 epocas); esse aqui e so um sinal de que o dataset/setup estao bons.
+- **Treino completo (40 epocas, yolo11n.pt) — resultado final:**
+  - mAP50 = 0,994 · mAP50-95 = 0,851 · precisao = 0,987 · recall = 0,979
+  - val/box_loss = 0,611 · val/cls_loss = 0,299 · val/dfl_loss = 0,860 (losses de val abaixo das de treino, sem sinal de overfitting nesse ponto)
+  - LIMITACAO HONESTA: o disco local do Colab (`/content`) e apagado a cada sessao nova, entao o `results.csv`/`results.png` finais so guardam a ULTIMA sessao de treino (1 epoca, a de numero 40), nao a curva completa das 40 epocas. Os pesos sao cumulativos e reais (carregam o aprendizado de todas as sessoes via `resume=True`), so o historico visual da curva epoca-a-epoca ficou fragmentado entre sessoes. Nao afeta a validade do modelo final, so a rastreabilidade da evolucao.
 
 **Decisões**
 - Dataset de deteccao: `trafficbr/vehicle-plate-color` v2 (Roboflow) em vez do sugerido originalmente no roteiro — 1 classe ("plate"), fotos de veiculo inteiro, placas Mercosul BR.
 - Modelo base: `yolo11n.pt` (nano), como no roteiro.
 - Dados brutos (imagens) ficam no disco local da VM, nao no Drive — persistem so durante a sessao, mas o download do Roboflow e rapido o suficiente pra refazer a cada sessao nova. So os resultados (pesos, figuras, tabelas) vao pro Drive.
 - RodoSol-ALPR descartado (ver Dia 0) — segue so com este dataset.
+- Estrategia de resiliencia do treino: `save_period=1` + thread em background copiando `last.pt` pro Drive a cada 180s + deteccao automatica de checkpoint no inicio do script (retoma com `resume=True` se achar checkpoint no Drive) — necessario porque a sessao gratuita do Colab caiu repetidas vezes durante o treino de 40 epocas.
 
 **Pendências**
-- Rodar o treino completo (40 epocas, `save_period=5`, `patience=10`).
-- Copiar pesos e `results.png` pro Drive e olhar as curvas (etapa 1.7).
+- Nenhuma pendencia do Dia 1 — treino completo, pesos e curvas conferidos (ver limitacao do historico do `results.csv` acima).
 
 **Próximo passo**
-- Lançar o treino completo em background e acompanhar o log.
+- Dia 2 — avaliar o detector no conjunto de TEST (nao so o val visto no treino) e recortar as placas detectadas, alimentando o dataset de caracteres do Dia 3.
 
 ---
 
@@ -204,4 +208,7 @@ Anote aqui o que quebrou e como foi resolvido. Vira a seção "Limitações" do 
 
 | Dia | Problema | Solução |
 | --- | --- | --- |
-| | | |
+| 1 | `colab exec` tem timeout padrão de 30s, causando `TimeoutError` em scripts mais demorados (matplotlib, downloads, treino) | Sempre passar `--timeout` explícito (600 pra scripts longos, 60 pra snippets rápidos) |
+| 1 | `colab upload` falhava de forma inconsistente (`File or directory not found` no caminho remoto) mesmo com sintaxe correta | Escrever o conteúdo do script via stdin em `colab exec` (`open(caminho,'w').write(codigo)`) em vez de usar `colab upload` |
+| 1 | Sessões gratuitas do Colab caem imprevisivelmente (perda de conexão, kernel perdido) durante o treino de 40 épocas — uma vez perdendo ~1h de progresso | Checkpoint periódico (`last.pt` copiado pro Drive a cada 180s) + detecção automática e retomada (`resume=True`) no início do script |
+| 1 | Disco local do Colab é apagado a cada sessão nova, então `results.csv` só guarda a última sessão de treino, não o histórico completo das 40 épocas | Aceito como limitação conhecida — pesos finais são cumulativos e válidos, só o gráfico de evolução ficou fragmentado |
