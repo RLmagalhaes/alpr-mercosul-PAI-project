@@ -4,7 +4,7 @@
 > Ao iniciar uma sessão, leia este arquivo antes de qualquer outra coisa.
 
 **Prazo de entrega:** menos de 1 semana a partir de 03/09 (prazo real da professora é ~1 mês após o fim das aulas, mas o Raphael está atrasado em relação ao roteiro de 7 dias).
-**Onde parei:** Dia 2 concluído — detector avaliado no conjunto de teste e todas as placas recortadas. Pronto pra começar o Dia 3 (pré-processamento e dataset de caracteres).
+**Onde parei:** Dia 3 concluído — funções de pré-processamento demonstradas (usando `src/preprocessamento.py` de verdade) e dataset de caracteres gerado (31.718 caracteres, 36 classes). Pronto pra começar o Dia 4 (CNN de caracteres).
 
 **Decisão de escopo (registro interno, não sai no relatório pra professora):** dado o atraso, a entrega vai fechar o pipeline completo de visão computacional (detecção → pré-processamento → segmentação → CNN de caracteres → regra de formato), cortando a parte de produção (Dia 6: ONNX, API, Docker, latência) e os slides. Isso **não aparece como corte** em nenhum material voltado à professora (RELATORIO.md, README.md, notebooks) — lá o projeto entregue é descrito como se fosse o escopo original. `api/`, `Dockerfile` e as dependências de ONNX continuam no repo, sem uso, como continuação pessoal de aprendizado do Raphael depois da entrega. Ver plano completo em `/Users/raphaelmagalhaes/.claude/plans/eu-j-estou-atrasado-groovy-squirrel.md`.
 
@@ -124,24 +124,38 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 
 ---
 
-## Dia 3 — Pré-processamento e dataset de caracteres
+## Dia 3 — Pré-processamento e dataset de caracteres ✅
 
 **Objetivo:** funções de tratamento prontas e a pasta `chars/` gerada.
 
 **O que foi feito**
-_(preencher)_
+- Funções de tratamento (`endireitar`, `preparar`, `detectar_layout`, `projecao_vertical`, `segmentar`) usadas diretamente de `src/preprocessamento.py` — enviadas pra VM via `colab upload` em vez de redefinidas no notebook (corrige uma inconsistência que vinha do Dia 2, onde o `iou()` tinha sido redefinido inline).
+- Demonstração do pré-processamento (recorte → cinza → CLAHE → Otsu) numa placa bem alinhada do teste.
+- Demonstração da segmentação em 7 fatias, comparando um caso bem alinhado com um caso de perspectiva forte (ver limitação abaixo).
+- Dataset de caracteres baixado (`project-swcsj/license-plate-character-extraction` v2 — **dataset separado** do de detecção, já vem com cada caractere anotado individualmente) e convertido em `chars/<CLASSE>/` com CLAHE+Otsu aplicado a cada recorte.
+- Checagem visual de amostras aleatórias de 8 classes para conferir se os recortes batem com o rótulo.
 
 **Métricas obtidas**
-_(preencher — total de caracteres por partição, classes mais raras, valor final de `corte_superior`)_
+- Recorte de placas (Dia 2, regerado): 13.735 no total (train 12.548, valid 942, test 245 — pequena variação frente ao rodado no Dia 2 por causa da ordem de leitura do glob, sem impacto real).
+- Dataset de caracteres: **31.718 caracteres rotulados** no total (train 30.530, valid 958, test 230), em 36 classes.
+- Classes ignoradas por não pertencerem ao alfabeto de placa: `EUR` (1.708 casos) e `-` (44 casos) — são marcações do dataset original (bandeira/hífen de formato antigo), corretamente filtradas.
+- Classes mais raras no treino: **Q (120)** e **O (228)** — bem abaixo do resto (a maioria das letras fica entre 400-1500, dígitos entre 1000-2100). Como Q e O também são visualmente parecidos com 0, esse é o par mais provável de confusão pro Dia 4.
+
+**Problemas de dados registrados (não contornados)**
+1. **Perspectiva forte quebra a segmentação:** `endireitar()` só corrige rotação no plano (via `minAreaRect`), não perspectiva. Numa foto tirada de ângulo mais agressivo, a segmentação por projeção (que assume fatias de largura igual) sai completamente desalinhada — ver `resultados/figuras/segmentacao.png`, que mostra lado a lado um caso bom (fatias legíveis) e um caso ruim (ilegível). Corrigir de verdade exigiria os 4 cantos da placa anotados, que este dataset não tem.
+2. **Caracteres deformados na origem (pendência do Dia 0, resolvida):** o dataset de caracteres aplicou "Resize to 640x640 (Stretch)" no pré-processamento do Roboflow — ou seja, esticou cada imagem sem preservar a proporção original, distorcendo a forma dos caracteres de um jeito não uniforme (a proporção original não é recuperável). Aceito como limitação do dataset escolhido.
+3. **Ruído de rótulo:** checagem visual encontrou pelo menos um exemplo rotulado como "O" que na verdade mostra um "H". Não foi feita filtragem manual (não há tempo nem um método confiável pra achar todos os casos parecidos em ~31 mil imagens) — fica registrado como ruído esperado de dataset anotado em massa, e é uma fonte honesta de erro que a CNN do Dia 4 provavelmente vai herdar.
 
 **Decisões**
-_(preencher)_
+- Dataset de caracteres é gerado direto das anotações por caractere (mais preciso), **não** a partir do `segmentar()` sobre os recortes do Dia 2 — `segmentar()` é usado só na hora da inferência (Dia 5), quando não há caixa por caractere disponível.
+- `chars/` fica só na VM (não no Drive), mesma lógica do Dia 2 — só o resumo (JSON) e as figuras vão pro Drive.
+- Notebooks passam a importar as funções de `src/` de verdade (via upload pontual do pacote pra VM), em vez de redefini-las — alinhado com a convenção do projeto.
 
 **Pendências**
-_(preencher)_
+- Nenhuma pendência nova do Dia 3.
 
 **Próximo passo**
-_(preencher)_
+- Dia 4 — treinar a CNN de 36 classes sobre `chars/`, com atenção especial à matriz de confusão em torno de Q/O/0.
 
 ---
 
