@@ -24,3 +24,6 @@ _to_delete/
 
 # Preview local de imagens do Colab (espelho temporario, nao e entregavel)
 _preview/
+
+# Trabalho de referencia de outra aluna (material de terceiros, nao entra no repo)
+t2/

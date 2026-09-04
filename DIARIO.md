@@ -3,8 +3,10 @@
 > Atualizado ao fim de **toda** sessão pelo agente. É a memória do projeto entre os dias.
 > Ao iniciar uma sessão, leia este arquivo antes de qualquer outra coisa.
 
-**Prazo de entrega:** _(preencher a data)_
-**Onde parei:** Dia 1 concluído — detector YOLO11n treinado (40 épocas completas via checkpoint + resume no Drive). Métricas finais: mAP50 = 0,994 · mAP50-95 = 0,851 · precisão = 0,987 · recall = 0,979. Pesos em `modelos/detector` (Drive). Pronto pra começar o Dia 2 (avaliação da detecção e recorte das placas).
+**Prazo de entrega:** menos de 1 semana a partir de 03/09 (prazo real da professora é ~1 mês após o fim das aulas, mas o Raphael está atrasado em relação ao roteiro de 7 dias).
+**Onde parei:** Dia 2 concluído — detector avaliado no conjunto de teste e todas as placas recortadas. Pronto pra começar o Dia 3 (pré-processamento e dataset de caracteres).
+
+**Decisão de escopo (registro interno, não sai no relatório pra professora):** dado o atraso, a entrega vai fechar o pipeline completo de visão computacional (detecção → pré-processamento → segmentação → CNN de caracteres → regra de formato), cortando a parte de produção (Dia 6: ONNX, API, Docker, latência) e os slides. Isso **não aparece como corte** em nenhum material voltado à professora (RELATORIO.md, README.md, notebooks) — lá o projeto entregue é descrito como se fosse o escopo original. `api/`, `Dockerfile` e as dependências de ONNX continuam no repo, sem uso, como continuação pessoal de aprendizado do Raphael depois da entrega. Ver plano completo em `/Users/raphaelmagalhaes/.claude/plans/eu-j-estou-atrasado-groovy-squirrel.md`.
 
 ---
 
@@ -14,8 +16,9 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 
 | Métrica | Meta | Obtido | Dia |
 | --- | --- | --- | --- |
-| mAP@0.5 (detecção) | > 0,90 | 0,994 (val, no treino — falta medir no test no Dia 2) | 1 |
-| mAP@0.5:0.95 | — | 0,851 (val, no treino — falta medir no test no Dia 2) | 1 |
+| mAP@0.5 (detecção, teste) | > 0,90 | 0,992 | 2 |
+| mAP@0.5:0.95 (detecção, teste) | — | 0,834 | 2 |
+| Precisão / recall (detecção, teste) | — | 0,978 / 0,977 | 2 |
 | Acurácia por caractere (CNN, teste) | > 0,95 | — | 4 |
 | Acurácia por placa — CNN sozinha | — | — | 5 |
 | Acurácia por placa — CNN + regra | > 0,80 | — | 5 |
@@ -90,24 +93,34 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 
 ---
 
-## Dia 2 — Avaliação da detecção e recorte das placas
+## Dia 2 — Avaliação da detecção e recorte das placas ✅
 
 **Objetivo:** métricas confiáveis do detector e as placas recortadas para o Dia 3.
 
 **O que foi feito**
-_(preencher)_
+- Detector avaliado no conjunto de TESTE (257 imagens, 268 instâncias) — não só no val visto durante o treino.
+- IoU implementado do zero (`iou()`) e testado com casos de sanidade (caixas idênticas, sem sobreposição, sobreposição parcial conhecida).
+- Efeito do limiar de NMS observado numa imagem com múltiplas placas: limiares até 0,7 deram 2 detecções corretas; limiar 0,9 (muito permissivo) deixou passar uma caixa duplicada da mesma placa (3 detecções).
+- Análise de erros: comparação predição x anotação via IoU, ranqueando os piores casos.
+- Todas as placas recortadas a partir das caixas **anotadas** (não as previstas), com margem de 8%, reaproveitando a mesma lógica de `src/preprocessamento.recortar()`. Rodado direto no disco local da VM — **não fica no Drive** (ver decisão de gestão de espaço abaixo).
+- Limpeza de espaço no Drive: apagados os 23 checkpoints por época do detector (`epoch*.pt`, `last.pt` — mantido só `best.pt`), a pasta `detector_checkpoint/` (mecanismo de resume do Dia 1, sem uso depois que o treino terminou) e `dados/deteccao/` (dataset bruto, que por engano tinha ficado no Drive além da VM). Pasta do projeto no Drive caiu de 1,2 GB para 70 MB. **Pendência do próprio Raphael:** esvaziar a lixeira do Drive pela interface, senão o espaço não é liberado de verdade.
+- Achado à parte: existia um `placas_recortadas.zip` no Drive (datado de 29/08) com números muito parecidos aos nossos, mas sem nenhum registro de que código o gerou. Decisão: não reaproveitar — regerado do zero de forma rastreável (código no notebook, resultado com contagem de problemas). O resultado bateu (e superou um pouco, por causa da conversão de polígono — ver abaixo).
 
 **Métricas obtidas**
-_(preencher — mAP@0.5, mAP@0.5:0.95, precisão, recall, nº de placas não detectadas)_
+- mAP@0.5 = 0,992 · mAP@0.5:0.95 = 0,834 · precisão = 0,978 · recall = 0,977 (conjunto de teste).
+- 2 de 257 placas não detectadas (IoU=0); os piores casos entre as detectadas têm IoU muito baixo (0,01-0,03), ou seja, são erros grosseiros, não só imprecisão de borda.
+- Recorte de todas as placas anotadas: 13.725 recortadas no total (train 12.539, valid 941, test 245). 720 anotações vieram em formato de polígono e foram convertidas pra caixa delimitadora (mesma conversão que o Ultralytics já faz sozinho). 924 recortes descartados por ficarem abaixo do tamanho mínimo (30x10px).
+- **Problema de dados registrado (não contornado):** 76% dos recortes aceitos (10.420 de 13.725) são "muito pequenos" (altura<40px ou largura<100px) — ver `resultados/figuras/recortes_placas_tamanhos.png`. Nos exemplos pequenos, o texto da placa já sai borrado só pela miniatura, antes de qualquer pré-processamento. É uma limitação do dataset de origem (fotos de resolução/enquadramento variados), não um bug do recorte. Efeito esperado: a segmentação de caracteres do Dia 3 deve ter uma taxa de falha bem maior nesse subconjunto — isso precisa aparecer explícito na análise de erros do Dia 3/4, sem tentar mascarar com upscaling ou heurística de salvamento.
 
 **Decisões**
-_(preencher)_
+- Placas recortadas ficam só no disco local da VM (`/content/dados/placas_recortadas/`), nunca no Drive — mesma lógica já usada pro dataset bruto no Dia 1. Como o recorte é rápido (poucos minutos, sem GPU), a célula 2.5 deve ser rodada de novo no início da sessão do Dia 3 em vez de tentar persistir os arquivos entre sessões.
+- Anotações em polígono são convertidas pra bounding box (min/max), não descartadas — mantém mais dados e é consistente com o que o Ultralytics já faz na validação.
 
 **Pendências**
-_(preencher)_
+- Esvaziar a lixeira do Google Drive (ação manual do Raphael, fora do alcance da CLI).
 
 **Próximo passo**
-_(preencher)_
+- Dia 3 — rodar de novo a célula de recorte (2.5) no início da sessão, depois pré-processamento e geração do dataset de caracteres em `chars/<CLASSE>/`.
 
 ---
 
