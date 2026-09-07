@@ -1,0 +1,132 @@
+{
+  "n_placas_teste": 14,
+  "n_placas_lidas_ok": 14,
+  "descartadas_reconstrucao": {
+    "sem_rotulo": 0,
+    "tamanho_diferente_de_7": 22
+  },
+  "acc_caractere_cnn_sozinha": 0.0612,
+  "acc_placa_cnn_sozinha": 0.0,
+  "acc_caractere_com_regra": 0.0714,
+  "acc_placa_com_regra": 0.0,
+  "previsao_teorica_acc_placa": 0.0,
+  "erros_por_posicao": [
+    14,
+    12,
+    14,
+    11,
+    14,
+    12,
+    14
+  ],
+  "exemplos_qualitativos": [
+    {
+      "arquivo": "17704351_jpg.rf.9e9b837e9c8988cfdc7e09bb1fa20bb2.jpg",
+      "status": "revisao_manual",
+      "placa": null,
+      "placa_sem_regra": "A66G25A",
+      "placa_com_regra": "AGG6254",
+      "layout": "antiga",
+      "score_azul": 0.002,
+      "conf_deteccao": 0.818,
+      "conf_media": 0.631,
+      "conf_minima": 0.299,
+      "bbox": [
+        94,
+        266,
+        123,
+        284
+      ]
+    },
+    {
+      "arquivo": "17704370_jpg.rf.afe7bb31d5a01b61006a6955449c0f12.jpg",
+      "status": "revisao_manual",
+      "placa": null,
+      "placa_sem_regra": "KBLY6I1",
+      "placa_com_regra": "KBLY611",
+      "layout": "antiga",
+      "score_azul": 0.0,
+      "conf_deteccao": 0.581,
+      "conf_media": 0.693,
+      "conf_minima": 0.519,
+      "bbox": [
+        148,
+        278,
+        178,
+        289
+      ]
+    },
+    {
+      "arquivo": "17704853_jpg.rf.f584883805048af1b586af12b2284b45.jpg",
+      "status": "revisao_manual",
+      "placa": null,
+      "placa_sem_regra": "LDZ1121",
+      "placa_com_regra": "LDZ1121",
+      "layout": "antiga",
+      "score_azul": 0.0,
+      "conf_deteccao": 0.888,
+      "conf_media": 0.569,
+      "conf_minima": 0.285,
+      "bbox": [
+        186,
+        254,
+        258,
+        281
+      ]
+    },
+    {
+      "arquivo": "17705097_jpg.rf.d1ee6693e4a264f288db2abc96b71050.jpg",
+      "status": "revisao_manual",
+      "placa": null,
+      "placa_sem_regra": "29S2LLI",
+      "placa_com_regra": "Z9S2L11",
+      "layout": "mercosul",
+      "score_azul": 0.255,
+      "conf_deteccao": 0.89,
+      "conf_media": 0.711,
+      "conf_minima": 0.358,
+      "bbox": [
+        172,
+        264,
+        244,
+        294
+      ]
+    },
+    {
+      "arquivo": "17705670_jpg.rf.eaef566560df4f138a8acff1a2ff6943.jpg",
+      "status": "revisao_manual",
+      "placa": null,
+      "placa_sem_regra": "G929EZ4",
+      "placa_com_regra": "G9Z9E24",
+      "layout": "mercosul",
+      "score_azul": 0.327,
+      "conf_deteccao": 0.878,
+      "conf_media": 0.643,
+      "conf_minima": 0.335,
+      "bbox": [
+        221,
+        184,
+        290,
+        209
+      ]
+    },
+    {
+      "arquivo": "17706416_jpg.rf.f9b5481cd89774eec2457d10364297c8.jpg",
+      "status": "revisao_manual",
+      "placa": null,
+      "placa_sem_regra": "L1XE17T",
+      "placa_com_regra": "LIXE177",
+      "layout": "antiga",
+      "score_azul": 0.0,
+      "conf_deteccao": 0.899,
+      "conf_media": 0.487,
+      "conf_minima": 0.229,
+      "bbox": [
+        53,
+        331,
+        105,
+        364
+      ]
+    }
+  ]
+}

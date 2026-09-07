@@ -4,7 +4,7 @@
 > Ao iniciar uma sessão, leia este arquivo antes de qualquer outra coisa.
 
 **Prazo de entrega:** menos de 1 semana a partir de 03/09 (prazo real da professora é ~1 mês após o fim das aulas, mas o Raphael está atrasado em relação ao roteiro de 7 dias).
-**Onde parei:** Dia 4 concluído — CNN de 36 classes treinada, acurácia de teste 0,9435 (com peso de classe balanceado). Pronto pra começar o Dia 5 (pipeline fim a fim + regra do formato).
+**Onde parei:** Dia 5 concluído com uma limitação séria e não resolvida — o pipeline fim a fim (`LeitorDePlacas`) está montado e funcionando estruturalmente, mas a `segmentar()` (divisão em 7 fatias de largura igual) se mostrou incompatível com placas de formato antigo e possivelmente frágil no formato Mercosul também. A acurácia por placa medida (0,0) NÃO deve ser lida como "o sistema não funciona" — é o resultado de uma medição sobre um dataset incompatível, documentado a fundo. Falta corrigir `segmentar()` e/ou montar um teste Mercosul confiável antes de reportar um número de acurácia por placa no relatório final. Próximo: fechamento da entrega (RELATORIO.md, README.md, git push).
 
 **Decisão de escopo (registro interno, não sai no relatório pra professora):** dado o atraso, a entrega vai fechar o pipeline completo de visão computacional (detecção → pré-processamento → segmentação → CNN de caracteres → regra de formato), cortando a parte de produção (Dia 6: ONNX, API, Docker, latência) e os slides. Isso **não aparece como corte** em nenhum material voltado à professora (RELATORIO.md, README.md, notebooks) — lá o projeto entregue é descrito como se fosse o escopo original. `api/`, `Dockerfile` e as dependências de ONNX continuam no repo, sem uso, como continuação pessoal de aprendizado do Raphael depois da entrega. Ver plano completo em `/Users/raphaelmagalhaes/.claude/plans/eu-j-estou-atrasado-groovy-squirrel.md`.
 
@@ -20,8 +20,8 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 | mAP@0.5:0.95 (detecção, teste) | — | 0,834 | 2 |
 | Precisão / recall (detecção, teste) | — | 0,978 / 0,977 | 2 |
 | Acurácia por caractere (CNN, teste) | > 0,95 | 0,9435 | 4 |
-| Acurácia por placa — CNN sozinha | — | — | 5 |
-| Acurácia por placa — CNN + regra | > 0,80 | — | 5 |
+| Acurácia por placa — CNN sozinha | — | 0,0 (ver limitação do Dia 5) | 5 |
+| Acurácia por placa — CNN + regra | > 0,80 | 0,0 (ver limitação do Dia 5) | 5 |
 | Latência Keras (p95) | — | — | 6 |
 | Latência ONNX (p95) | — | — | 6 |
 
@@ -195,21 +195,42 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 
 ---
 
-## Dia 5 — Pipeline fim a fim e regra do formato
+## Dia 5 — Pipeline fim a fim e regra do formato ✅ (com limitação séria não resolvida)
 
 **Objetivo:** `ler_placa()` funcionando e as métricas finais medidas.
 
 **O que foi feito**
-_(preencher)_
+- `LeitorDePlacas` (`src/pipeline.py`) e `aplicar_mascara`/`formato_valido` (`src/validacao.py`) já estavam implementados e testados desde a Fase 0 — usados diretamente, sem redefinir nada.
+- Decisão de método (registrada antes de rodar): o dataset de detecção (trafficbr) não tem o texto da placa anotado, só a caixa — não dá pra medir acurácia por caractere/placa nele sem rotular à mão. Optei por reconstruir o texto verdadeiro a partir do dataset de caracteres (`project-swcsj`, cada caractere já anotado individualmente), ordenando as caixas por posição X. 14 das 36 imagens de teste tinham exatamente 7 caracteres válidos (22 descartadas por terem um número diferente de 7 — registrado, não contornado).
+- **Descoberta importante (bug caçado a fundo, não só aceito):** a primeira rodada deu acurácia por caractere de 0,11 (bem abaixo dos 0,94 do Dia 4) — investiguei imagem por imagem em vez de aceitar o número. Achado 1: essas imagens do `project-swcsj` NÃO são recortes limpos de placa como os do detector real — têm bastante fundo (carroceria) e rotação forte (uma delas girada ~30°, muito acima do limite de segurança de 20° do `endireitar()`). Corrigido com uma função nova (`recortar_via_caixas`, só neste notebook) que usa a geometria das 7 caixas anotadas pra estimar o ângulo certo e recortar — funcionou bem (ver `resultados/figuras/verificacao_recorte_dia5.png`, recortes ficaram nítidos e retos).
+- **Achado 2 (mais sério, não contornado):** mesmo com o recorte correto, a acurácia continuou baixíssima (0,06-0,07). Diagnóstico fatia a fatia (script à parte, ver imagem salva localmente durante a investigação) mostrou que cada uma das "7 fatias" da `segmentar()` pega **pedaços de dois caracteres vizinhos**, não um caractere só. Causa: `segmentar()` divide a faixa em 7 partes de largura IGUAL, mas o `project-swcsj` é majoritariamente placa de **formato antigo** (`LLLDDDD`, ex. "WJZ 7424"), que tem um vão vazio entre o grupo de 3 letras e o de 4 dígitos — esse vão "rouba" espaço da divisão igual e desalinha tudo. A CNN nunca viu esse padrão porque foi treinada com o caractere recortado exatamente pela caixa da anotação (Dia 3/4), não por fatia de largura igual.
+- Decisão tomada (perguntei ao Raphael, ele escolheu): **não** rotular um novo conjunto de teste à mão (opção que existia, usando fotos Mercosul reais) — aceitar o número baixo medido nesse dataset específico e documentar a causa raiz, em vez de gastar mais tempo numa métrica que não é o foco do prazo apertado.
+- Demonstração qualitativa do pipeline COMPLETO (`LeitorDePlacas.ler()`, com detecção YOLO de verdade) rodada em 6 fotos reais do dataset de detecção (formato Mercosul, o alvo real do projeto) — sem gabarito, só inspeção visual. Comparando à mão com o que dá pra ler nas fotos: pelo menos 1 caso claro de erro total mesmo com placa grande e legível ("BBT 5192" real → "LDZ1121" previsto). As 6 saíram com `status: revisao_manual` (confiança mínima abaixo do limiar de 0,70) — o mecanismo de segurança do `LeitorDePlacas` funcionou como projetado, sinalizando incerteza em vez de arriscar uma resposta errada.
 
 **Métricas obtidas**
-_(preencher — acurácia por caractere e por placa, antes e depois da regra; posição que mais erra)_
+- Conjunto de teste reconstruído (`project-swcsj`, majoritariamente formato antigo): 14 placas.
+- Acurácia por caractere — CNN sozinha: **0,0612** · CNN + regra do formato: **0,0714**.
+- Acurácia por placa (as 7 corretas) — CNN sozinha: **0,0** · CNN + regra: **0,0** (0 de 14 placas 100% corretas).
+- Erros por posição (1 a 7, de 14 placas): `[14, 12, 14, 11, 14, 12, 14]` — erro quase total em TODAS as posições, consistente com o desalinhamento sistemático da segmentação, não com um problema pontual de uma posição.
+- **Estes números NÃO representam a acurácia real do sistema no formato Mercosul** (o alvo do projeto) — foram medidos sobre um dataset majoritariamente de formato antigo, incompatível com a suposição de largura igual da `segmentar()`. Ver limitação abaixo.
+
+**LIMITAÇÃO HONESTA (a mais séria do projeto até aqui, não resolvida)**
+1. `segmentar()` (`src/preprocessamento.py`) assume que os 7 caracteres têm largura igual e ocupam toda a faixa da placa. Isso é falso pra placas de formato antigo (vão entre letras e dígitos) e não foi testado a fundo pra Mercosul tampouco. Corrigir de verdade exigiria detectar os espaços entre caracteres (ex. vales na `projecao_vertical`, que já existe) em vez de dividir em 7 partes iguais — não deu tempo de implementar e validar essa mudança nesta sessão.
+2. A demonstração qualitativa (6 fotos Mercosul reais, com gabarito lido à mão por mim durante a checagem) sugere que o problema não é só do formato antigo: pelo menos 1 caso com placa grande e nítida saiu completamente errado. Isso quer dizer que a acurácia de 0,9435 por caractere do Dia 4 (medida em caracteres já recortados exatamente pela caixa de anotação) **não se traduz automaticamente** em acurácia equivalente no pipeline fim a fim (que depende de `segmentar()` acertar o recorte de cada caractere primeiro).
+3. Não foi montado um conjunto de teste quantitativo e confiável pro formato Mercosul (que exigiria rotular fotos reais à mão, ~20-30 no mínimo) — decisão consciente de não fazer isso agora, dado o prazo. **Isso significa que a meta "acurácia por placa > 0,80" não foi comprovadamente atingida nem descartada** — está genuinamente sem medição confiável.
+4. O mecanismo de `LIMIAR_CONFIANCA` (0,70) do `LeitorDePlacas` funciona como rede de segurança: nas 6 fotos de demonstração, nenhuma saiu com confiança suficiente pra ser aceita sem revisão — o sistema errou, mas soube que tinha errado. Isso é um resultado honesto pra reportar: o sistema é conservador, não confiantemente errado.
 
 **Decisões**
-_(preencher)_
+- Medir a parte de reconhecimento (pré-processamento → segmentação → CNN → regra) separada da detecção, usando o dataset de caracteres com reconstrução de texto via ordenação de caixas — abordagem correta em princípio, mas expôs uma incompatibilidade de dataset (formato antigo) que quebrou a medição.
+- Não rotular manualmente um conjunto Mercosul pra ter um número "bonito" pro relatório — reportar a limitação real é mais importante do que ter uma métrica de vitrine. Ver `resultados/figuras/verificacao_recorte_dia5.png` (prova de que o recorte/rotação não é o problema) e `resultados/figuras/pipeline_exemplos.png` (demonstração qualitativa).
+- `recortar_via_caixas()` fica só no notebook (`05_pipeline_final.py`), não em `src/` — só é possível porque o dataset de caracteres anota cada caractere individualmente; o detector real (Dia 1/2) não tem essa informação, então essa função não serve pro pipeline de produção.
+
+**Pendências**
+- **Corrigir `segmentar()`** pra não assumir largura igual (ex. detectar vales na projeção vertical em vez de dividir em 7 partes fixas) — a limitação mais importante do projeto, deveria entrar no relatório como "trabalho futuro" necessário, não opcional.
+- Montar um conjunto de teste Mercosul rotulado à mão (20-30 fotos) pra ter uma medição confiável de acurácia por placa fim a fim — não coube no prazo desta sessão.
 
 **Próximo passo**
-_(preencher)_
+- Fechamento da entrega: `RELATORIO.md` (+ PDF) cobrindo os 5 itens pedidos pela professora, `README.md` com a tabela de resultados preenchida (sendo honesto sobre a limitação do Dia 5), e `git push`. Ver plano em `/Users/raphaelmagalhaes/.claude/plans/eu-j-estou-atrasado-groovy-squirrel.md`.
 
 ---
 
@@ -256,3 +277,6 @@ Anote aqui o que quebrou e como foi resolvido. Vira a seção "Limitações" do 
 | 1 | Disco local do Colab é apagado a cada sessão nova, então `results.csv` só guarda a última sessão de treino, não o histórico completo das 40 épocas | Aceito como limitação conhecida — pesos finais são cumulativos e válidos, só o gráfico de evolução ficou fragmentado |
 | 4 | Figuras/tabelas dos Dias 1-3 nunca tinham sido trazidas do Drive pro repositório Git local — só existiam na cópia da VM (`colab exec` salva direto no Drive montado, não no Mac) | Baixadas todas de uma vez via `colab download` no Dia 4; a partir de agora, baixar do Drive pro local antes de fechar cada sessão, não só ao final do projeto |
 | 4 | CNN de 36 classes ficou em 0,9348 na primeira rodada (meta > 0,95), com Q e O (as classes mais raras do treino) em 0% de acerto no teste | `class_weight` balanceado por classe no `fit()` — subiu para 0,9435; residual aceito como limitação (Q/O têm só 1-3 exemplos no teste, ruído estatístico) |
+| 5 | `colab drivemount` deu `ValueError: mount failed` na primeira sessão do dia; a sessão de exec também caiu uma vez no meio do script (`RuntimeError: Connection was lost`) | Sessão nova (`colab new` de novo) resolveu o mount; a queda de conexão foi só o websocket — a VM continuou viva e `colab exec` de novo retomou sem perder nada |
+| 5 | `colab upload` falhou com `500 Internal Server Error` nos 5 arquivos de `src/` (mesma instabilidade já registrada no Dia 1) | Workaround: gerar um script Python que escreve o conteúdo de cada arquivo via `open(...).write(repr_do_conteudo)` e mandar por `colab exec -f` (stdin), em vez de `colab upload` |
+| 5 | Acurácia por caractere/placa caiu quase a zero ao medir o pipeline fim a fim sobre o dataset de caracteres (`project-swcsj`) | Investigado a fundo (não só aceito): 2 causas reais — (1) imagens desse dataset tem fundo e rotação forte, corrigido com recorte via geometria das caixas anotadas; (2) `segmentar()` assume largura igual entre os 7 caracteres, o que quebra em placas de formato antigo (vão entre letras e dígitos). Causa 2 não foi corrigida — fica registrada como limitação séria e pendência pro relatório |
