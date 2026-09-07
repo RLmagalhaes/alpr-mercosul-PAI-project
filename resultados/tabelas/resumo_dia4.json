@@ -1,0 +1,95 @@
+{
+  "acuracia_teste": 0.9435,
+  "perda_teste": 0.485,
+  "parametros": 359588,
+  "epocas_rodadas": 26,
+  "n_classes": 36,
+  "pares_mais_confundidos": [
+    {
+      "real": "0",
+      "previsto": "O",
+      "n": 2
+    },
+    {
+      "real": "0",
+      "previsto": "4",
+      "n": 1
+    },
+    {
+      "real": "0",
+      "previsto": "P",
+      "n": 1
+    },
+    {
+      "real": "4",
+      "previsto": "L",
+      "n": 1
+    },
+    {
+      "real": "7",
+      "previsto": "1",
+      "n": 1
+    },
+    {
+      "real": "9",
+      "previsto": "3",
+      "n": 1
+    },
+    {
+      "real": "9",
+      "previsto": "S",
+      "n": 1
+    },
+    {
+      "real": "B",
+      "previsto": "8",
+      "n": 1
+    },
+    {
+      "real": "Q",
+      "previsto": "C",
+      "n": 1
+    },
+    {
+      "real": "Q",
+      "previsto": "D",
+      "n": 1
+    },
+    {
+      "real": "S",
+      "previsto": "3",
+      "n": 1
+    },
+    {
+      "real": "U",
+      "previsto": "J",
+      "n": 1
+    }
+  ],
+  "geracao_chars": {
+    "train": {
+      "ok": 30530,
+      "classe_ignorada": 1695,
+      "imagem_ilegivel": 0,
+      "sem_rotulo": 0,
+      "anotacao_invalida": 0,
+      "recorte_pequeno_demais": 0
+    },
+    "valid": {
+      "ok": 958,
+      "classe_ignorada": 44,
+      "imagem_ilegivel": 0,
+      "sem_rotulo": 0,
+      "anotacao_invalida": 0,
+      "recorte_pequeno_demais": 0
+    },
+    "test": {
+      "ok": 230,
+      "classe_ignorada": 13,
+      "imagem_ilegivel": 0,
+      "sem_rotulo": 0,
+      "anotacao_invalida": 0,
+      "recorte_pequeno_demais": 0
+    }
+  }
+}

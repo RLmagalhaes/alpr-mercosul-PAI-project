@@ -1,0 +1,37 @@
+{
+  "train": {
+    "ok": 30530,
+    "classe_ignorada": 1695,
+    "imagem_ilegivel": 0,
+    "sem_rotulo": 0,
+    "anotacao_invalida": 0,
+    "recorte_pequeno_demais": 0,
+    "classes_ignoradas_detalhe": {
+      "EUR": 1652,
+      "-": 43
+    }
+  },
+  "valid": {
+    "ok": 958,
+    "classe_ignorada": 44,
+    "imagem_ilegivel": 0,
+    "sem_rotulo": 0,
+    "anotacao_invalida": 0,
+    "recorte_pequeno_demais": 0,
+    "classes_ignoradas_detalhe": {
+      "EUR": 43,
+      "-": 1
+    }
+  },
+  "test": {
+    "ok": 230,
+    "classe_ignorada": 13,
+    "imagem_ilegivel": 0,
+    "sem_rotulo": 0,
+    "anotacao_invalida": 0,
+    "recorte_pequeno_demais": 0,
+    "classes_ignoradas_detalhe": {
+      "EUR": 13
+    }
+  }
+}

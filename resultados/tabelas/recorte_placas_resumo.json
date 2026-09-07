@@ -1,0 +1,29 @@
+{
+  "train": {
+    "ok": 12539,
+    "poligono_convertido": 621,
+    "imagem_ilegivel": 0,
+    "sem_rotulo": 0,
+    "anotacao_invalida": 0,
+    "recorte_pequeno_demais": 847,
+    "recortes_muito_pequenos_mas_aceitos": 9359
+  },
+  "valid": {
+    "ok": 941,
+    "poligono_convertido": 66,
+    "imagem_ilegivel": 0,
+    "sem_rotulo": 0,
+    "anotacao_invalida": 0,
+    "recorte_pequeno_demais": 54,
+    "recortes_muito_pequenos_mas_aceitos": 825
+  },
+  "test": {
+    "ok": 245,
+    "poligono_convertido": 33,
+    "imagem_ilegivel": 0,
+    "sem_rotulo": 0,
+    "anotacao_invalida": 0,
+    "recorte_pequeno_demais": 23,
+    "recortes_muito_pequenos_mas_aceitos": 236
+  }
+}

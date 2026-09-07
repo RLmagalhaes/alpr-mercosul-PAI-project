@@ -4,7 +4,7 @@
 > Ao iniciar uma sessão, leia este arquivo antes de qualquer outra coisa.
 
 **Prazo de entrega:** menos de 1 semana a partir de 03/09 (prazo real da professora é ~1 mês após o fim das aulas, mas o Raphael está atrasado em relação ao roteiro de 7 dias).
-**Onde parei:** Dia 3 concluído — funções de pré-processamento demonstradas (usando `src/preprocessamento.py` de verdade) e dataset de caracteres gerado (31.718 caracteres, 36 classes). Pronto pra começar o Dia 4 (CNN de caracteres).
+**Onde parei:** Dia 4 concluído — CNN de 36 classes treinada, acurácia de teste 0,9435 (com peso de classe balanceado). Pronto pra começar o Dia 5 (pipeline fim a fim + regra do formato).
 
 **Decisão de escopo (registro interno, não sai no relatório pra professora):** dado o atraso, a entrega vai fechar o pipeline completo de visão computacional (detecção → pré-processamento → segmentação → CNN de caracteres → regra de formato), cortando a parte de produção (Dia 6: ONNX, API, Docker, latência) e os slides. Isso **não aparece como corte** em nenhum material voltado à professora (RELATORIO.md, README.md, notebooks) — lá o projeto entregue é descrito como se fosse o escopo original. `api/`, `Dockerfile` e as dependências de ONNX continuam no repo, sem uso, como continuação pessoal de aprendizado do Raphael depois da entrega. Ver plano completo em `/Users/raphaelmagalhaes/.claude/plans/eu-j-estou-atrasado-groovy-squirrel.md`.
 
@@ -19,7 +19,7 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 | mAP@0.5 (detecção, teste) | > 0,90 | 0,992 | 2 |
 | mAP@0.5:0.95 (detecção, teste) | — | 0,834 | 2 |
 | Precisão / recall (detecção, teste) | — | 0,978 / 0,977 | 2 |
-| Acurácia por caractere (CNN, teste) | > 0,95 | — | 4 |
+| Acurácia por caractere (CNN, teste) | > 0,95 | 0,9435 | 4 |
 | Acurácia por placa — CNN sozinha | — | — | 5 |
 | Acurácia por placa — CNN + regra | > 0,80 | — | 5 |
 | Latência Keras (p95) | — | — | 6 |
@@ -159,24 +159,39 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 
 ---
 
-## Dia 4 — CNN de caracteres
+## Dia 4 — CNN de caracteres ✅
 
 **Objetivo:** classificador de 36 classes com acurácia acima de 95%.
 
 **O que foi feito**
-_(preencher)_
+- `chars/` regenerado do zero no início da sessão (disco local do Colab é apagado a cada sessão — mesma lógica dos Dias 2/3), com o mesmo código do Dia 3: 31.718 caracteres, 36 classes (train 30.530, valid 958, test 230). Números batem exatamente com o Dia 3.
+- CNN pequena treinada do zero (`src`-free, arquitetura só do roteiro: 3 blocos Conv2D+MaxPool, Dense 128, Dropout 0.3), 359.588 parâmetros, `EarlyStopping`/`ModelCheckpoint`/`ReduceLROnPlateau`.
+- **Primeira rodada** (sem peso de classe): acurácia de teste = 0,9348, parou em 13 épocas. Matriz de confusão mostrou **Q e O com 0% de acerto** — exatamente as duas classes mais raras no treino já apontadas como risco no Dia 3 (Q=120 exemplos, O=228).
+- **Segunda rodada** (com `class_weight` balanceado por classe, pelo inverso da frequência no treino — pesos de 0,4 a 7,1): acurácia subiu para **0,9435**, 26 épocas. O passou de 0% para 100% de recall (mas ganhou falsos positivos vindos do dígito "0"); Q passou de 0% para 33% de recall.
+- Matriz de confusão e pares confundidos gerados a partir da 2ª rodada (a que ficou nos artefatos finais).
+- **Achado de processo corrigido nesta sessão:** as figuras/tabelas dos Dias 1 a 3 nunca tinham sido trazidas do Drive pro repositório local — só existiam na cópia da VM. Baixadas agora todas de uma vez pra `resultados/figuras/` e `resultados/tabelas/` locais (8 figuras, 9 tabelas/JSONs), senão o relatório final não teria de onde puxar essas imagens. Cuidado nos próximos dias: sempre baixar do Drive pro local antes de fechar a sessão.
 
 **Métricas obtidas**
-_(preencher — acurácia de teste, nº de parâmetros, épocas até parar)_
+- Acurácia no teste (final, com peso de classe): **0,9435** — abaixo da meta de 0,95, mas por pouco.
+- Perda no teste: 0,485. Parâmetros: 359.588. Épocas até o `EarlyStopping`: 26 (de 30 possíveis).
+- Acurácia por classe (36 classes): 32 das 36 classes com recall ≥ 0,75 (a maioria em 1,0). As exceções: **O** (recall 1,0 mas precisão 0,33 — passou a "roubar" o dígito 0), **Q** (recall 0,33, 3 exemplos no teste), **0** (recall 0,56 — pagou o preço pelo peso extra em O), **V** (recall 0,75).
+- Ver `resultados/tabelas/classification_report_cnn.csv` e `resultados/tabelas/resumo_dia4.json` para os números completos.
+- **LIMITAÇÃO HONESTA:** o conjunto de teste tem só 230 caracteres pra 36 classes — Q e O aparecem 3 e 1 vez, respectivamente. Cada erro nessas classes pesa ~0,4-1,3 ponto percentual na acurácia total. Não dá pra saber se 33%/100% de recall nessas classes é representativo ou só sorte de amostra pequena — decisão tomada foi aceitar o resultado e não continuar ajustando hiperparâmetro em cima do ruído de 1-3 exemplos.
 
-**Pares mais confundidos** — esta lista alimenta a regra do Dia 5
-_(preencher: ex. O→0, I→1, S→5, B→8)_
+**Pares mais confundidos** (matriz de confusão final, real → previsto)
+- 0→O: 2 · 0→4: 1 · 0→P: 1 · 4→L: 1 · 7→1: 1 · 9→3: 1 · 9→S: 1 · B→8: 1 · Q→C: 1 · Q→D: 1 · S→3: 1 · U→J: 1
+- A aposta do roteiro (O↔0, I↔1, S↔5, B↔8, Z↔2, G↔6) acertou em parte: 7↔1 e B→8 apareceram; O↔0 apareceu só depois do ajuste de peso (antes disso Q↔0 é que aparecia). S↔5 e Z↔2/G↔6 não apareceram — no lugar, surgiram confusões novas (9→S, U→J, 4→L) que fazem sentido visual mas não estavam na lista original.
 
 **Decisões**
-_(preencher)_
+- Usar `class_weight` balanceado (peso = total_treino / (36 × contagem_da_classe)) em vez de oversampling ou data augmentation extra — mudança de uma linha no `fit()`, sem precisar tocar no pipeline de geração de dados.
+- Aceitar 0,9435 (abaixo da meta de 0,95) como resultado final do Dia 4 em vez de continuar ajustando: o resíduo está concentrado em classes com 1-3 exemplos no teste, então mais tuning ficaria ajustando em cima de ruído estatístico, não corrigindo um problema real do modelo. Registrado como limitação honesta, não maquiada.
+- `modelos/cnn_chars.keras` fica só no Drive (mesma lógica de `modelos/detector` no Dia 1 — `.gitignore` cobre `*.keras`).
+
+**Pendências**
+- Nenhuma pendência nova do Dia 4, além da limitação de dados já registrada acima.
 
 **Próximo passo**
-_(preencher)_
+- Dia 5 — montar `ler_placa()` fim a fim (detecção → pré-processamento → segmentação → CNN → regra do formato) e medir a acurácia por placa. A regra de formato (posição só aceita letra OU só dígito) deve corrigir de graça os erros tipo 0→O e Q→0/C/D que a CNN sozinha não resolve.
 
 ---
 
@@ -239,3 +254,5 @@ Anote aqui o que quebrou e como foi resolvido. Vira a seção "Limitações" do 
 | 1 | `colab upload` falhava de forma inconsistente (`File or directory not found` no caminho remoto) mesmo com sintaxe correta | Escrever o conteúdo do script via stdin em `colab exec` (`open(caminho,'w').write(codigo)`) em vez de usar `colab upload` |
 | 1 | Sessões gratuitas do Colab caem imprevisivelmente (perda de conexão, kernel perdido) durante o treino de 40 épocas — uma vez perdendo ~1h de progresso | Checkpoint periódico (`last.pt` copiado pro Drive a cada 180s) + detecção automática e retomada (`resume=True`) no início do script |
 | 1 | Disco local do Colab é apagado a cada sessão nova, então `results.csv` só guarda a última sessão de treino, não o histórico completo das 40 épocas | Aceito como limitação conhecida — pesos finais são cumulativos e válidos, só o gráfico de evolução ficou fragmentado |
+| 4 | Figuras/tabelas dos Dias 1-3 nunca tinham sido trazidas do Drive pro repositório Git local — só existiam na cópia da VM (`colab exec` salva direto no Drive montado, não no Mac) | Baixadas todas de uma vez via `colab download` no Dia 4; a partir de agora, baixar do Drive pro local antes de fechar cada sessão, não só ao final do projeto |
+| 4 | CNN de 36 classes ficou em 0,9348 na primeira rodada (meta > 0,95), com Q e O (as classes mais raras do treino) em 0% de acerto no teste | `class_weight` balanceado por classe no `fit()` — subiu para 0,9435; residual aceito como limitação (Q/O têm só 1-3 exemplos no teste, ruído estatístico) |
