@@ -73,11 +73,14 @@ class LeitorDePlacas:
         placa = endireitar(placa)
 
         # 3) padronizar, realçar e binarizar
-        colorida, _, _, binaria = preparar(placa)
+        colorida, _, realcada, binaria = preparar(placa)
         layout, score_azul = detectar_layout(colorida)
 
-        # 4) segmentar e classificar os 7 caracteres de uma vez
-        fatias = segmentar(binaria)
+        # 4) segmentar (por componente conectado, não largura igual) e
+        # classificar os 7 caracteres de uma vez -- Otsu LOCAL por fatia
+        # (via `cinza=realcada`), não a placa inteira de uma vez só
+        # (ver DIARIO, Dia 5)
+        fatias = segmentar(binaria, cinza=realcada)
         lote = np.stack(fatias).astype("float32")[..., None]
         probabilidades = self.cnn.predict(lote, verbose=0)
         indices = probabilidades.argmax(axis=1)

@@ -102,7 +102,7 @@ print(f"Placas de teste reconstruidas: {len(registros_teste)}")
 print(f"Descartadas: {descartadas_teste}")
 
 
-def recortar_via_caixas(img, caixas, margem=0.35):
+def recortar_via_caixas(img, caixas, margem=0.12):
     """Usa as caixas de caractere (fracoes xc,yc,w,h) pra estimar o angulo
     real da placa (reta pelos centros) e recortar so a regiao da placa,
     ja desrotacionada -- so e possivel porque este dataset anota cada
@@ -142,8 +142,9 @@ for linha, r in enumerate(registros_teste[:4]):
     caminho = f"{DADOS_CHARS}/test/images/{r['arquivo']}"
     original = cv2.imread(caminho)
     recorte = recortar_via_caixas(original, r["caixas"])
-    _, _, _, binaria = preparar(recorte)
-    fatias = segmentar(binaria)
+    colorida, _, realcada, binaria = preparar(recorte)
+    layout, _ = detectar_layout(colorida)
+    fatias = segmentar(binaria, cinza=realcada)
     mosaico = np.hstack(fatias)
     eixos[linha, 0].imshow(cv2.cvtColor(original, cv2.COLOR_BGR2RGB))
     eixos[linha, 0].set_title(f"original ({r['real']})", fontsize=8)
@@ -171,9 +172,9 @@ def ler_recorte(caminho_img, caixas, usar_mascara=True):
     recorte = recortar_via_caixas(img, caixas)
     if recorte.size == 0:
         return None
-    colorida, _, _, binaria = preparar(recorte)
+    colorida, _, realcada, binaria = preparar(recorte)
     layout, _ = detectar_layout(colorida)
-    fatias = segmentar(binaria)
+    fatias = segmentar(binaria, cinza=realcada)
     lote = np.stack(fatias).astype("float32")[..., None]
     probs = cnn.predict(lote, verbose=0)
     idx = probs.argmax(axis=1)

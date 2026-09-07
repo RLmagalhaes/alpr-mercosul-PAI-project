@@ -107,22 +107,140 @@ def projecao_vertical(binaria: np.ndarray,
     return faixa, faixa.sum(axis=0) / 255.0
 
 
+def _componentes_de_caracteres(faixa: np.ndarray, altura_min_frac: float = 0.5,
+                              largura_min_frac: float = 0.02,
+                              altura_max_frac: float = 1.3):
+    """Acha os blobs de tinta na faixa binária via componentes conectados.
+
+    Devolve uma lista de caixas (x, y, w, h) ordenada da esquerda pra
+    direita -- uma por caractere, na teoria. Três filtros, nessa ordem:
+
+    1. Altura mínima (fração da maior altura bruta) -- descarta ruído
+       pequeno (poeira, parafuso, sujeira).
+    2. Largura mínima (fração da largura da faixa) -- a MOLDURA da placa
+       é tão alta quanto um caractere (passaria o filtro 1), mas é bem
+       mais fina.
+    3. Altura MÁXIMA (fração da altura mediana dos sobreviventes) -- pega
+       o caso oposto: a moldura às vezes é mais alta que os caracteres
+       de verdade (atravessa a faixa inteira, de cima a baixo, enquanto
+       um caractere real tem uma margem). Sem esse terceiro filtro, a
+       moldura nas duas bordas sobrevivia e virava "mais dois
+       caracteres" (ver DIARIO, Dia 5).
+    """
+    n_labels, _, stats, _ = cv2.connectedComponentsWithStats(faixa, connectivity=8)
+    caixas = [tuple(int(v) for v in stats[i, :4]) for i in range(1, n_labels)]
+    if not caixas:
+        return []
+    altura_max_bruta = max(h for _, _, _, h in caixas)
+    largura_min = faixa.shape[1] * largura_min_frac
+    caixas = [c for c in caixas
+             if c[3] >= altura_max_bruta * altura_min_frac and c[2] >= largura_min]
+
+    if len(caixas) > 1:
+        mediana = sorted(c[3] for c in caixas)[len(caixas) // 2]
+        caixas = [c for c in caixas if c[3] <= mediana * altura_max_frac]
+
+    caixas.sort(key=lambda c: c[0])
+    return caixas
+
+
+def _dividir_no_vale(perfil: np.ndarray, x: int, w: int) -> int:
+    """Acha o corte mais provável dentro de [x, x+w) para separar dois
+    caracteres grudados: o ponto de menor tinta, evitando as bordas (pra
+    não cortar dentro do próprio caractere, só entre dois)."""
+    borda = max(1, w // 6)
+    ini, fim = x + borda, x + w - borda
+    if fim <= ini:
+        return x + w // 2
+    return ini + int(np.argmin(perfil[ini:fim]))
+
+
+def _juntar_ou_dividir(caixas, n: int, perfil: np.ndarray):
+    """Ajusta a lista de caixas pra ter exatamente n.
+
+    Sobrou caixa (caracteres fragmentados em 2+ componentes, ex. traço
+    solto)? Junta as duas mais próximas horizontalmente, repetindo até
+    sobrar `n`. Faltou caixa (dois caracteres grudados viraram 1
+    componente só)? Divide a mais larga no vale de menor tinta (não no
+    meio cego), repetindo até completar `n`.
+    """
+    caixas = list(caixas)
+    while len(caixas) > n and len(caixas) > 1:
+        gaps = [caixas[i + 1][0] - (caixas[i][0] + caixas[i][2]) for i in range(len(caixas) - 1)]
+        i = int(np.argmin(gaps))
+        x1, y1, w1, h1 = caixas[i]
+        x2, y2, w2, h2 = caixas[i + 1]
+        x, y = min(x1, x2), min(y1, y2)
+        caixas[i:i + 2] = [(x, y, max(x1 + w1, x2 + w2) - x, max(y1 + h1, y2 + h2) - y)]
+
+    while len(caixas) < n:
+        i = int(np.argmax([c[2] for c in caixas])) if caixas else 0
+        if not caixas:
+            caixas = [(0, 0, len(perfil), len(perfil))]
+        x, y, w, h = caixas[i]
+        corte = _dividir_no_vale(perfil, x, w)
+        corte = min(max(corte, x + 1), x + w - 1)
+        caixas[i:i + 1] = [(x, y, corte - x, h), (corte, y, x + w - corte, h)]
+
+    return sorted(caixas, key=lambda c: c[0])
+
+
 def segmentar(binaria: np.ndarray,
               n: int = N_CARACTERES,
               corte_superior: float = CORTE_SUPERIOR,
-              saida: Tuple[int, int] = TAMANHO_CARACTERE) -> List[np.ndarray]:
-    """Divide a faixa dos caracteres em n fatias iguais e padroniza o tamanho.
+              saida: Tuple[int, int] = TAMANHO_CARACTERE,
+              cinza: np.ndarray = None) -> List[np.ndarray]:
+    """Divide a faixa dos caracteres em n recortes e padroniza o tamanho.
 
-    A divisão é aproximada de propósito: a placa tem espaçamento regular, e o
-    pequeno desalinhamento funciona como variação natural que a CNN aprende a
-    tolerar (ainda mais com augmentation de translação no treino).
+    Usa componentes conectados (blobs de tinta) pra achar cada caractere
+    pelo seu próprio contorno, em vez de assumir largura igual pra todos --
+    placas reais têm caracteres de largura bem diferente ("W" bem mais
+    largo que "I" ou "1"), e um "M" de largura fixa desalinhava tudo a
+    partir do primeiro caractere fora do padrão (ver DIARIO, Dia 5: a
+    tentativa anterior, dividir em fatias de largura igual -- com ou sem
+    tratamento especial do vão letra/dígito -- não resolvia esse
+    desalinhamento). Se os blobs não baterem exatamente com `n` (caractere
+    partido em 2 componentes, ou dois grudados em 1), `_juntar_ou_dividir`
+    ajusta. Faixa sem nenhum componente (placa ilegível) cai de volta pra
+    divisão em partes iguais, só pra não quebrar o pipeline.
+
+    Com `cinza` (a imagem em tons de cinza/CLAHE, ANTES da binarização --
+    `realcada`, devolvida por `preparar()`), cada fatia é binarizada com
+    Otsu LOCAL, uma por vez, em vez de reaproveitar pedaços da imagem já
+    binarizada de uma vez só pra placa inteira. Isso importa muito: é
+    exatamente assim que os dados de treino da CNN (Dia 3/4) foram
+    gerados -- cada caractere recortado e binarizado sozinho. Testado no
+    Dia 5: a mesma placa que a CNN acertava 100% caractere por caractere
+    (recorte exato + Otsu local) errava quase tudo com Otsu global da
+    placa inteira. Sem `cinza`, cada fatia sai da própria imagem binária.
 
     Se as fatias saírem tortas, ajuste `corte_superior` entre 0.30 e 0.40.
     """
-    faixa, _ = projecao_vertical(binaria, corte_superior)
-    largura_fatia = faixa.shape[1] // n
-    return [
-        cv2.resize(faixa[:, i * largura_fatia:(i + 1) * largura_fatia],
-                   saida, interpolation=cv2.INTER_AREA)
-        for i in range(n)
-    ]
+    faixa, perfil = projecao_vertical(binaria, corte_superior)
+    largura = faixa.shape[1]
+
+    caixas = _componentes_de_caracteres(faixa)
+    if not caixas:
+        largura_fatia = largura / n
+        caixas = [(round(i * largura_fatia), 0,
+                  round((i + 1) * largura_fatia) - round(i * largura_fatia), faixa.shape[0])
+                 for i in range(n)]
+    caixas = _juntar_ou_dividir(caixas, n, perfil)
+
+    if cinza is not None:
+        y0 = int(cinza.shape[0] * corte_superior)
+        fonte = cinza[y0:, :]
+    else:
+        fonte = faixa
+
+    fatias = []
+    for x, y, w, h in caixas:
+        pedaco = fonte[:, x:x + w]
+        if pedaco.size == 0:
+            fatias.append(np.zeros(saida, dtype=np.uint8))
+            continue
+        if cinza is not None:
+            pedaco = cv2.threshold(pedaco, 0, 255,
+                                   cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+        fatias.append(cv2.resize(pedaco, saida, interpolation=cv2.INTER_AREA))
+    return fatias
