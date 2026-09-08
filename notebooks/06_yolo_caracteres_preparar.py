@@ -30,10 +30,18 @@ DADOS = "/content/dados/caracteres"
 # 6.1 Dataset de caracteres (o MESMO do Dia 3/4, agora usado como
 #     dataset de DETECCAO em vez de fonte de recortes)
 # ---------------------------------------------------------------
+# A chave NAO fica no codigo: este repo vai ser publicado. Ela e lida da
+# variavel de ambiente da VM ou de um arquivo criado na VM antes de rodar
+# (ver o comando no DIARIO, Dia 6). O `export` feito no Mac nao chega aqui --
+# este script roda na VM do Colab, que tem ambiente proprio.
 chave = os.environ.get("ROBOFLOW_API_KEY")
+if not chave and os.path.exists("/content/.roboflow_key"):
+    chave = open("/content/.roboflow_key").read().strip()
 if not chave:
-    print("ERRO: exporte ROBOFLOW_API_KEY antes de rodar.")
-    print("  export ROBOFLOW_API_KEY=<sua chave>")
+    print("ERRO: chave do Roboflow nao encontrada na VM.")
+    print("Rode antes, no terminal do Mac:")
+    print("  echo 'open(\"/content/.roboflow_key\",\"w\").write(\"SUA_CHAVE\")'"
+          " | colab exec -s dia6")
     sys.exit(1)
 
 if not os.path.exists(f"{DADOS}/data.yaml"):
