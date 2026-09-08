@@ -4,7 +4,7 @@
 > Ao iniciar uma sessão, leia este arquivo antes de qualquer outra coisa.
 
 **Prazo de entrega:** menos de 1 semana a partir de 03/09 (prazo real da professora é ~1 mês após o fim das aulas, mas o Raphael está atrasado em relação ao roteiro de 7 dias).
-**Onde parei:** Dia 5 concluído. O pipeline fim a fim (`LeitorDePlacas`) está montado e funcionando estruturalmente. Na investigação da acurácia por placa, achei e corrigi 3 bugs reais em `segmentar()`/`preparar()` (recorte via geometria das caixas, segmentação por componentes conectados em vez de largura igual, binarização Otsu local por caractere) — todos comprovados individualmente, um deles com 100% de acerto num teste isolado. Mesmo assim, a acurácia agregada no conjunto de teste reconstruído não melhorou (ficou em ~0,05). A causa exata do resíduo não foi identificada — decisão consciente de parar a investigação aqui, manter as 3 correções (são melhorias reais) e documentar a limitação com honestidade em vez de continuar ajustando sem fim claro. A meta "acurácia por placa > 0,80" **não tem medição confiável** no momento — nem comprovada, nem descartada. Próximo: fechamento da entrega (RELATORIO.md, README.md, git push), sendo transparente sobre essa limitação.
+**Onde parei:** Dia 6 em andamento. **A causa raiz do Dia 5 foi encontrada e confirmada com número.** Não era "diferença de poucos pixels": `corte_superior=0.35` era aplicado mesmo quando a entrada já era só a faixa dos caracteres, **decapitando o topo de cada caractere** antes da segmentação começar. Corrigido, a acurácia por caractere foi de **0,061 para 0,612** e a acurácia por placa de **0/14 para 3/14** (ver `resultados/tabelas/ablacao_segmentacao.csv`). O resíduo até 0,9435 é o teto da segmentação por componentes conectados, também quantificado: ela acha exatamente 7 blobs em apenas 4 de 14 placas. Por isso está em treino um **YOLO detector de caracteres** para substituir `segmentar()`. Próximo: avaliar esse YOLO e montar o conjunto Mercosul rotulado à mão.
 
 **Decisão de escopo (registro interno, não sai no relatório pra professora):** dado o atraso, a entrega vai fechar o pipeline completo de visão computacional (detecção → pré-processamento → segmentação → CNN de caracteres → regra de formato), cortando a parte de produção (Dia 6: ONNX, API, Docker, latência) e os slides. Isso **não aparece como corte** em nenhum material voltado à professora (RELATORIO.md, README.md, notebooks) — lá o projeto entregue é descrito como se fosse o escopo original. `api/`, `Dockerfile` e as dependências de ONNX continuam no repo, sem uso, como continuação pessoal de aprendizado do Raphael depois da entrega. Ver plano completo em `/Users/raphaelmagalhaes/.claude/plans/eu-j-estou-atrasado-groovy-squirrel.md`.
 
@@ -20,10 +20,11 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 | mAP@0.5:0.95 (detecção, teste) | — | 0,834 | 2 |
 | Precisão / recall (detecção, teste) | — | 0,978 / 0,977 | 2 |
 | Acurácia por caractere (CNN, teste) | > 0,95 | 0,9435 | 4 |
-| Acurácia por placa — CNN sozinha | — | 0,0 (medição não confiável — ver limitação do Dia 5) | 5 |
-| Acurácia por placa — CNN + regra | > 0,80 | sem medição confiável (ver limitação do Dia 5) | 5 |
-| Latência Keras (p95) | — | — | 6 |
-| Latência ONNX (p95) | — | — | 6 |
+| Acurácia por caractere — pipeline, dataset europeu | — | 0,061 → **0,612** (após corrigir o Dia 5) | 6 |
+| Acurácia por placa — pipeline, dataset europeu | — | 0,0 → **0,214** (3 de 14) | 6 |
+| Acurácia por placa — Mercosul, gabarito humano | > 0,80 | ainda sem medição (conjunto por montar) | 6 |
+| Latência Keras (p95) | — | — | (cortado do escopo) |
+| Latência ONNX (p95) | — | — | (cortado do escopo) |
 
 ---
 
@@ -239,7 +240,83 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 
 ---
 
-## Dia 6 — ONNX, API e latência
+## Dia 6 — Causa raiz do Dia 5 encontrada, e a virada para YOLO de caracteres 🔄
+
+**Objetivo:** entender por que a acurácia do Dia 5 ficou em 0,051 e decidir se valia recomeçar, trocar de dataset ou corrigir.
+
+**Resposta curta:** nenhuma das três. Era bug, e a medição também estava errada.
+
+**As três descobertas**
+
+1. **Bug 1 — `corte_superior=0.35` decapitava os caracteres (A CAUSA DOMINANTE).**
+   `pipeline.py` calculava o `layout` e não usava para escolher o corte; `05_pipeline_final.py` passava o default mesmo com `recortar_via_caixas()` já entregando só a faixa dos caracteres. Numa imagem de 200×62, `y0 = 21`, mas os caracteres começam por volta da linha 6 — **o terço superior de cada caractere ia fora antes da segmentação**. Isso explica as previsões do Dia 5 cheias de `I`, `1`, `4`, `L`, `P`: são as formas que sobram de um caractere sem topo.
+   Corrigido com `CORTE_POR_LAYOUT = {"mercosul": 0.35, "antiga": 0.30}` e `corte_superior=0.0` no notebook.
+
+2. **Bug 2 — `segmentar()` calculava `(y, h)` por componente e descartava.**
+   Recortava `fonte[:, x:x+w]` (justo em X, altura inteira da faixa), enquanto o treino da CNN recorta justo nos dois eixos (`04_cnn_caracteres.py:65`). Corrigido com `_apertar_vertical()`. **Efeito medido: neutro** — ver ablação abaixo. Mantido porque é conceitualmente correto, sem alegar ganho.
+
+3. **A medição do Dia 5 era inválida.** `dados/caracteres/data.yaml` tem `nc: 38` com a classe `EUR`: é um dataset **europeu**. Os gabaritos (`RALLYUS`, `6366363`, `S9WTPKL`) não seguem LLLDDDD nem LLLDLDD, então aplicar a máscara brasileira só podia degradar — por isso `acc` deu idêntica com e sem regra (0,051 → 0,051). A ablação do Dia 6 mede **sem máscara**.
+
+**Ablação (`resultados/tabelas/ablacao_segmentacao.csv`, 14 placas, sem máscara)**
+
+| variante | acc_caractere | acc_placa |
+| --- | --- | --- |
+| Dia 5 (baseline) | 0,0612 | 0,0000 |
+| **só `corte_superior=0`** | **0,6122** | **0,2143** |
+| só aperto vertical | 0,1224 | 0,0000 |
+| corte=0 + aperto | 0,5816 | 0,1429 |
+| corte=0 + aperto + folga 10% | 0,6122 | 0,2143 |
+
+O Bug 1 sozinho responde por praticamente todo o ganho. O Bug 2 não acrescenta nada sobre ele (diferença de 3 caracteres em 98, dentro do ruído). `pipeline.py` usa `margem_vertical=0.10`, a melhor configuração medida.
+
+**Por que 0,612 e não 0,94: o teto da segmentação clássica (medido)**
+
+`_componentes_de_caracteres` acha **exatamente 7 blobs em apenas 4 de 14 placas** a 200×62. Aumentando a resolução intermediária melhora e satura:
+
+| tamanho intermediário | placas com exatamente 7 blobs |
+| --- | --- |
+| 200×62 (atual) | 4 de 14 |
+| 400×124 | 6 de 14 |
+| 600×186 | 8 de 14 |
+| + abertura morfológica | praticamente sem efeito |
+
+Os caracteres se encostam uns nos outros e na moldura da placa depois da binarização, então os blobs não correspondem a caracteres e `_juntar_ou_dividir` faz cirurgia grosseira. **Não é parâmetro mal ajustado, é o teto do método.**
+
+**Decisão: YOLO detector de caracteres**
+
+O `project-swcsj` já anota cada caractere individualmente — **32.225 caixas no treino**. É exatamente o formato para treinar um YOLO que detecta os 7 caracteres direto, sem binarizar, sem componentes conectados, sem `corte_superior`. Mesma infra do Dia 1.
+- Ensaio de 3 épocas: mAP50 = 0,077 → 0,206 → **0,290**, `cls_loss` de 4,18 → 2,66. Aprendendo de forma saudável; caminhos e rótulos validados.
+- Treino completo de 40 épocas disparado (`notebooks/06_yolo_caracteres_treinar.py`), com checkpoint no Drive a cada 3 min e `resume=True`, como no Dia 1.
+- A segmentação clássica **fica no código**: o relatório compara os dois métodos, o que é um resultado melhor do que só reportar uma limitação.
+
+**Testes**
+
+Os dois bugs eram invisíveis para a suíte porque `_faixa_com_blocos` desenhava todo bloco na mesma extensão vertical. Novo `_faixa_com_blocos_variados` + 5 testes; **verificado que 3 deles falham se a correção for revertida**. Total: 28 testes.
+
+**Correções de processo**
+
+- `metricas.py`: `acuracia_caractere` contava predição vazia como 7 erros, `erros_por_posicao` pulava — uniformizado, com teste.
+- **A chave do Roboflow exposta nos notebooks foi revogada** (confirmado: `401 This API key does not exist or has been revoked`). A nova fica só na VM (`/content/.roboflow_key`), nunca no repositório. Falta trocar as 4 ocorrências hardcoded nos notebooks 01/03/04/05.
+
+**Achados de ambiente**
+
+- **Inferência roda local**: o `.venv` do Mac tem TF 2.17 + cv2 4.10 e `dados/` está no disco. Toda a ablação rodou em segundos, sem Colab. Colab só para treinar.
+- `colab drivemount` **precisa ser rodado pelo Raphael no terminal** — exige autenticação interativa; disparado pelo agente dá `ValueError: mount failed`, e sessão nova não resolve.
+- O `.keras` salvo pela VM (Keras 3.13) não abre no Keras 3.10 local, porque o venv é Python 3.9 e `keras>=3.11` exige Python 3.11+. Contorno: `modelos/cnn_chars_compat.keras`, o mesmo modelo com a chave `quantization_config` removida do `config.json` interno — mesmos 359.588 parâmetros.
+
+**Pendências**
+
+- Avaliar o YOLO de caracteres treinado e comparar com a segmentação clássica.
+- Montar o conjunto Mercosul rotulado à mão (~25 fotos) — única forma de medir a meta "acurácia por placa > 0,80" no alvo real. **Ainda sem medição.**
+- Recalibrar `LIMIAR_CONFIANCA` (0,70 rejeitou 6/6 no Dia 5) a partir de dados com gabarito.
+- Trocar a chave hardcoded nos notebooks 01/03/04/05 por leitura de arquivo/variável de ambiente.
+
+**Próximo passo**
+- Esperar as 40 épocas, avaliar, e montar o gabarito Mercosul.
+
+---
+
+## Dia 6 (escopo original) — ONNX, API e latência
 
 **Objetivo:** o sistema virando serviço.
 
@@ -286,3 +363,9 @@ Anote aqui o que quebrou e como foi resolvido. Vira a seção "Limitações" do 
 | 5 | `colab upload` falhou com `500 Internal Server Error` nos 5 arquivos de `src/` (mesma instabilidade já registrada no Dia 1) | Workaround: gerar um script Python que escreve o conteúdo de cada arquivo via `open(...).write(repr_do_conteudo)` e mandar por `colab exec -f` (stdin), em vez de `colab upload` |
 | 5 | Acurácia por caractere/placa caiu quase a zero ao medir o pipeline fim a fim sobre o dataset de caracteres (`project-swcsj`) | Investigado a fundo, 3 bugs reais corrigidos: (1) imagens do dataset têm fundo e rotação forte — corrigido com recorte via geometria das caixas anotadas; (2) `segmentar()` assumia largura igual entre os 7 caracteres — reescrita pra usar componentes conectados; (3) binarização Otsu era global (placa inteira) em vez de local (por caractere, como no treino) — corrigido com Otsu por fatia. Mesmo assim a acurácia agregada não melhorou — causa exata do resíduo não identificada, decisão de parar a investigação e documentar como limitação (ver Dia 5) |
 | 5 | `colab exec` do kernel mantém os módulos Python já importados em memória entre chamadas — reenviar um `src/` atualizado pro `/content/src` NÃO faz o kernel usar a versão nova, continua rodando o código antigo já importado | `colab restart-kernel -s <sessao>` antes de re-testar qualquer mudança em `src/` na mesma sessão — sem isso, o diagnóstico fica testando código desatualizado sem erro nenhum pra avisar |
+| 6 | Acurácia de 0,051 no Dia 5, causa "não identificada" | `corte_superior=0.35` era aplicado mesmo quando a entrada já era só a faixa dos caracteres, decapitando o topo de cada um. Corrigido: acc por caractere de 0,061 para 0,612, acc por placa de 0/14 para 3/14 |
+| 6 | Os testes não pegavam nenhum dos dois bugs de recorte | `_faixa_com_blocos` desenhava todo bloco na mesma extensão vertical. Novo `_faixa_com_blocos_variados` + 5 testes, com falha verificada ao reverter a correção |
+| 6 | Segmentação por componentes conectados acha 7 blobs em só 4/14 placas (8/14 no melhor caso) | Teto do método, não parâmetro. Decisão: treinar YOLO detector de caracteres sobre as 32.225 caixas já anotadas |
+| 6 | `colab drivemount` falha com `ValueError: mount failed` mesmo em sessão nova | Exige autenticação interativa — precisa ser rodado pelo Raphael no terminal dele, não pelo agente |
+| 6 | Chave do Roboflow hardcoded nos notebooks foi revogada (`401`) | Chave nova gravada só na VM (`/content/.roboflow_key`); notebook 06 lê de lá. Pendente trocar nos notebooks 01/03/04/05 |
+| 6 | `cnn_chars.keras` salvo pelo Keras 3.13 da VM não abre no Keras 3.10 local (venv é Python 3.9, `keras>=3.11` exige 3.11+) | `cnn_chars_compat.keras`: mesmo modelo com `quantization_config` removida do `config.json` interno |
