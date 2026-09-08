@@ -1,0 +1,6 @@
+variante,corte_superior,aperto_vertical,folga,acc_caractere,acc_placa
+Dia 5 (baseline),0.35,False,0.0,0.0612,0.0
+so corte_superior=0,0.0,False,0.0,0.6122,0.2143
+so aperto vertical,0.35,True,0.0,0.1224,0.0
+corte=0 + aperto,0.0,True,0.0,0.5816,0.1429
+corte=0 + aperto + folga,0.0,True,0.1,0.6122,0.2143

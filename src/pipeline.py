@@ -83,7 +83,12 @@ class LeitorDePlacas:
         # (ver DIARIO, Dia 5). O corte do topo depende do layout: usar
         # 0.35 pros dois formatos cortava o topo dos caracteres da placa
         # antiga, que tem a faixa superior menor (ver DIARIO, Dia 6)
-        fatias = segmentar(binaria, cinza=realcada,
+        # margem_vertical=0.10 saiu da ablacao do Dia 6
+        # (resultados/tabelas/ablacao_segmentacao.csv): o recorte justo puro
+        # ficou 0,582 e com 10% de folga 0,612 -- diferenca dentro do ruido
+        # (3 caracteres em 98), mas a folga aproxima da caixa anotada do treino,
+        # que e um pouco mais larga que o blob de tinta.
+        fatias = segmentar(binaria, cinza=realcada, margem_vertical=0.10,
                            corte_superior=CORTE_POR_LAYOUT.get(layout, CORTE_SUPERIOR))
         lote = np.stack(fatias).astype("float32")[..., None]
         probabilidades = self.cnn.predict(lote, verbose=0)

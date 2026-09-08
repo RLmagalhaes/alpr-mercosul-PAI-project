@@ -42,7 +42,13 @@ from src.preprocessamento import preparar, segmentar  # noqa: E402
 from src.validacao import CLASSES  # noqa: E402
 
 DADOS_CHARS = f"{RAIZ}/dados/caracteres"
-CAMINHO_CNN = f"{RAIZ}/modelos/cnn_chars.keras"
+# O .keras salvo pela VM (Keras 3.13) nao abre no Keras 3.10 local (Python
+# 3.9 nao aceita keras>=3.11). `cnn_chars_compat.keras` e o MESMO modelo
+# com a chave `quantization_config` removida do config -- mesmos 359.588
+# parametros, mesmos pesos.
+CAMINHO_CNN = f"{RAIZ}/modelos/cnn_chars_compat.keras"
+if not os.path.exists(CAMINHO_CNN):
+    CAMINHO_CNN = f"{RAIZ}/modelos/cnn_chars.keras"
 SAIDA_TAB = f"{RAIZ}/resultados/tabelas"
 SAIDA_FIG = f"{RAIZ}/resultados/figuras"
 
@@ -261,6 +267,39 @@ def main():
 
     pd.DataFrame(linhas_b).to_csv(f"{SAIDA_TAB}/ablacao_segmentacao.csv", index=False)
     print(f"\nTabelas salvas em {SAIDA_TAB}/")
+
+    # ---------- figura: a prova visual do bug do corte_superior ----------
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    os.makedirs(SAIDA_FIG, exist_ok=True)
+    mostrar = registros[:3]
+    fig, eixos = plt.subplots(len(mostrar) * 3, 8, figsize=(12, len(mostrar) * 5))
+    for li, r in enumerate(mostrar):
+        img = cv2.imread(f"{DADOS_CHARS}/test/images/{r['arquivo']}")
+        alvos = [recorte_estilo_treino(img, c) for c in r["caixas"]]
+        recorte = recortar_via_caixas(img, r["caixas"])
+        _, _, realcada, binaria = preparar(recorte)
+        faixas = [
+            ("alvo: recorte do treino", alvos),
+            ("Dia 5: corte_superior=0.35", segmentar_variante(binaria, realcada, 0.35, False, 0.0)),
+            ("Dia 6: corte=0 + folga 10%", segmentar_variante(binaria, realcada, 0.0, True, 0.10)),
+        ]
+        for vi, (nome, imgs) in enumerate(faixas):
+            linha = li * 3 + vi
+            eixos[linha, 0].text(0.5, 0.5, f"{r['real']}\n{nome}", fontsize=7,
+                                 ha="center", va="center")
+            eixos[linha, 0].axis("off")
+            for k in range(7):
+                ax = eixos[linha, k + 1]
+                im = imgs[k] if k < len(imgs) and imgs[k] is not None else np.zeros((32, 32), np.uint8)
+                ax.imshow(im, cmap="gray", vmin=0, vmax=255)
+                ax.set_title(r["real"][k], fontsize=7)
+                ax.axis("off")
+    plt.tight_layout()
+    plt.savefig(f"{SAIDA_FIG}/segmentacao_antes_depois.png", dpi=140, bbox_inches="tight")
+    print(f"Figura salva em {SAIDA_FIG}/segmentacao_antes_depois.png")
 
 
 if __name__ == "__main__":
