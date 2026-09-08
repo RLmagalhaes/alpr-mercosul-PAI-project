@@ -1,0 +1,7 @@
+pipeline,acc_caractere,acc_placa
+A) classico (segmentar) — sem regra,0.2714,0.0
+A) classico (segmentar) — com regra,0.3,0.0
+B) YOLO caixas + CNN — sem regra,0.5476,0.0667
+B) YOLO caixas + CNN — com regra,0.619,0.2333
+C) YOLO caixa+classe — sem regra,0.619,0.1333
+C) YOLO caixa+classe — com regra,0.719,0.3333

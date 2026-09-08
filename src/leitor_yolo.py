@@ -42,6 +42,18 @@ N_CARACTERES = 7
 # As duas não são caractere de placa e precisam sair antes de ordenar por X.
 NAO_CARACTERES = {"EUR", "-"}
 
+# Limiar de confianca do detector de caracteres. Bem mais baixo que o 0,25
+# habitual DE PROPOSITO: como a placa tem exatamente 7 caracteres e ficamos com
+# os 7 de maior confianca, falso positivo e barato -- o caro e faltar caractere,
+# que estraga a leitura inteira e ainda invalida a regra de formato.
+# Varredura nas 30 placas com gabarito (Dia 6):
+#   conf   placas com 7 chars   acc_caractere   acc_placa
+#   0.05        29/30              0.7190        0.3333
+#   0.10        27/30              0.6952        0.3000
+#   0.25        23/30              0.6571        0.2333
+#   0.50         8/30              0.4810        0.1667
+CONF_CARACTERE = 0.05
+
 
 class LeitorDePlacasYOLO:
     def __init__(self, caminho_detector: str, caminho_chars: str,
@@ -125,7 +137,7 @@ class LeitorDePlacasYOLO:
     # ---------- pipeline ----------
 
     def ler(self, entrada: Union[str, np.ndarray], conf: float = 0.25,
-            conf_char: float = 0.25, modo: str = "cnn",
+            conf_char: float = CONF_CARACTERE, modo: str = "cnn",
             usar_mascara: bool = True) -> dict:
         """`modo`: "yolo" usa a classe do próprio detector de caracteres;
         "cnn" usa só as caixas dele e classifica com a CNN do Dia 4."""
