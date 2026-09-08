@@ -4,7 +4,7 @@
 > Ao iniciar uma sessão, leia este arquivo antes de qualquer outra coisa.
 
 **Prazo de entrega:** menos de 1 semana a partir de 03/09 (prazo real da professora é ~1 mês após o fim das aulas, mas o Raphael está atrasado em relação ao roteiro de 7 dias).
-**Onde parei:** Dia 6 em andamento. **A causa raiz do Dia 5 foi encontrada e confirmada com número.** Não era "diferença de poucos pixels": `corte_superior=0.35` era aplicado mesmo quando a entrada já era só a faixa dos caracteres, **decapitando o topo de cada caractere** antes da segmentação começar. Corrigido, a acurácia por caractere foi de **0,061 para 0,612** e a acurácia por placa de **0/14 para 3/14** (ver `resultados/tabelas/ablacao_segmentacao.csv`). O resíduo até 0,9435 é o teto da segmentação por componentes conectados, também quantificado: ela acha exatamente 7 blobs em apenas 4 de 14 placas. Por isso está em treino um **YOLO detector de caracteres** para substituir `segmentar()`. Próximo: avaliar esse YOLO e montar o conjunto Mercosul rotulado à mão.
+**Onde parei:** Dia 6 concluído. **A causa raiz do Dia 5 foi encontrada, e o gargalo real do projeto foi resolvido.** Primeiro: `corte_superior=0.35` decapitava o topo de cada caractere antes da segmentação (0,061 → 0,612 no dataset europeu ao corrigir). Segundo, e mais importante: mesmo corrigido, a segmentação por componentes conectados tem teto baixo — acha exatamente 7 blobs em só 4 de 14 placas. Substituída por um **YOLO detector de caracteres**, treinado sobre as 32.225 caixas já anotadas. Medido em **30 placas brasileiras com gabarito humano** (o conjunto que faltava desde o Dia 5): acurácia por caractere **0,300 → 0,719**, por placa **0/30 → 10/30**. Próximo: fechar as 40 épocas do YOLO (parou na ~30 por queda de sessão) e escrever o relatório.
 
 **Decisão de escopo (registro interno, não sai no relatório pra professora):** dado o atraso, a entrega vai fechar o pipeline completo de visão computacional (detecção → pré-processamento → segmentação → CNN de caracteres → regra de formato), cortando a parte de produção (Dia 6: ONNX, API, Docker, latência) e os slides. Isso **não aparece como corte** em nenhum material voltado à professora (RELATORIO.md, README.md, notebooks) — lá o projeto entregue é descrito como se fosse o escopo original. `api/`, `Dockerfile` e as dependências de ONNX continuam no repo, sem uso, como continuação pessoal de aprendizado do Raphael depois da entrega. Ver plano completo em `/Users/raphaelmagalhaes/.claude/plans/eu-j-estou-atrasado-groovy-squirrel.md`.
 
@@ -20,9 +20,10 @@ Preencher conforme os números forem saindo. Estes são os valores que vão para
 | mAP@0.5:0.95 (detecção, teste) | — | 0,834 | 2 |
 | Precisão / recall (detecção, teste) | — | 0,978 / 0,977 | 2 |
 | Acurácia por caractere (CNN, teste) | > 0,95 | 0,9435 | 4 |
-| Acurácia por caractere — pipeline, dataset europeu | — | 0,061 → **0,612** (após corrigir o Dia 5) | 6 |
-| Acurácia por placa — pipeline, dataset europeu | — | 0,0 → **0,214** (3 de 14) | 6 |
-| Acurácia por placa — Mercosul, gabarito humano | > 0,80 | ainda sem medição (conjunto por montar) | 6 |
+| Acurácia por caractere — dataset europeu, segmentação clássica | — | 0,061 → **0,612** (após corrigir o Dia 5) | 6 |
+| mAP@0.5 — YOLO de caracteres (38 classes, valid) | — | **0,871** (época 25; treino parou na ~30 de 40) | 6 |
+| **Acurácia por caractere — 30 placas BR, gabarito humano** | > 0,95 | clássico 0,300 · YOLO+CNN 0,619 · **YOLO 0,719** | 6 |
+| **Acurácia por placa — 30 placas BR, gabarito humano** | > 0,80 | clássico 0/30 · YOLO+CNN 7/30 · **YOLO 10/30 (0,333)** | 6 |
 | Latência Keras (p95) | — | — | (cortado do escopo) |
 | Latência ONNX (p95) | — | — | (cortado do escopo) |
 
@@ -304,15 +305,60 @@ Os dois bugs eram invisíveis para a suíte porque `_faixa_com_blocos` desenhava
 - `colab drivemount` **precisa ser rodado pelo Raphael no terminal** — exige autenticação interativa; disparado pelo agente dá `ValueError: mount failed`, e sessão nova não resolve.
 - O `.keras` salvo pela VM (Keras 3.13) não abre no Keras 3.10 local, porque o venv é Python 3.9 e `keras>=3.11` exige Python 3.11+. Contorno: `modelos/cnn_chars_compat.keras`, o mesmo modelo com a chave `quantization_config` removida do `config.json` interno — mesmos 359.588 parâmetros.
 
+**O conjunto de teste Mercosul (o que faltava desde o Dia 5)**
+
+`notebooks/06_gabarito_mercosul.py` monta o conjunto e mede. **30 placas brasileiras — 16 Mercosul, 14 formato antigo — com texto verdadeiro conferido por humano.**
+
+- **Achado: o dataset trafficbr tem anotações grosseiramente erradas.** As 12 maiores caixas rotuladas `plate` têm razão largura/altura entre 0,71 e 1,70 e cobrem 45-63% da imagem — são carros inteiros. Ordenar por área sem filtrar seleciona justamente esses erros. Filtro: razão entre 1,8 e 5,0 (placa real tem mediana 2,20) e no máximo 25% da imagem. **Isso provavelmente também explica os piores casos do Dia 2, com IoU 0,01-0,03 — era erro de anotação, não do detector.** Vale corrigir aquela interpretação no relatório.
+- O split de teste tem só 3 caixas com ≥100×40px depois do filtro, então o conjunto usa `test` + `valid` (16 + 146 candidatas a ≥90×32px), com a origem registrada no CSV. As de `valid` foram usadas para selecionar o `best.pt` do detector (viés otimista leve na detecção), mas são inéditas para o reconhecimento, que é o que este conjunto mede.
+- **Ponto metodológico:** o agente leu as 30 placas, mas 6 das leituras eram `O` vs `0` que só se resolviam **usando a regra de formato** — e o sistema avaliado também usa essa regra. Gabarito assim seria circular e inflaria a acurácia. O Raphael conferiu as 8 duvidosas: todas confirmaram a leitura do agente, e a #6 (ilegível por reflexo) ele leu como `BCE7C00`.
+
+**Resultado final: comparação dos 3 pipelines, mesmas 30 placas** (`resultados/tabelas/comparacao_pipelines.csv`)
+
+| pipeline | acc_caractere | acc_placa |
+| --- | --- | --- |
+| A) clássico (`segmentar`) + CNN do Dia 4 | 0,300 | 0/30 |
+| B) YOLO só para as **caixas** + a **mesma** CNN | 0,619 | 7/30 |
+| **C) YOLO caixa + classe** | **0,719** | **10/30 (0,333)** |
+
+**O experimento B é a prova da tese:** mantendo a CNN idêntica dos dois lados e trocando apenas a segmentação, a acurácia por caractere dobra e a acurácia por placa sai de zero. O gargalo era a segmentação — não a CNN, não o dataset, não o detector.
+
+Erros por posição caem de forma consistente: A `[24, 18, 21, 17, 21, 23, 23]` → C `[5, 8, 8, 10, 9, 10, 3]`. O miolo erra mais que as pontas, o que sugere confusão de classe e não falha de detecção.
+
+**`CONF_CARACTERE = 0,05`** (não 0,25). Como a placa tem exatamente 7 caracteres e ficamos com os 7 de maior confiança, falso positivo é barato — faltar caractere estraga a leitura inteira e ainda invalida a regra de formato. Varredura:
+
+| conf | placas com 7 chars | acc_caractere | acc_placa |
+| --- | --- | --- | --- |
+| 0,05 | 29/30 | 0,7190 | 0,3333 |
+| 0,10 | 27/30 | 0,6952 | 0,3000 |
+| 0,25 | 23/30 | 0,6571 | 0,2333 |
+| 0,50 | 8/30 | 0,4810 | 0,1667 |
+
+A regra de formato passou a render **+10 pontos** em C (0,619 → 0,719), contra +3 no pipeline clássico — regra só conserta leitura que já está quase certa.
+
+**Queda de sessão: a estratégia do Dia 1 foi exercitada e funcionou**
+
+A sessão do Colab caiu por volta da época 30. O `colab exec` perdeu a sessão às 22:51, mas o `last.pt` no Drive continuou sendo atualizado até 23:11 — foi só o websocket que caiu, a VM seguiu treinando e sincronizando. O checkpoint a cada 3 min preservou tudo, e o modelo foi recuperado do Drive sem perda. **Nenhuma época foi refeita.**
+
+**LIMITAÇÕES HONESTAS**
+
+1. **A meta "acurácia por placa > 0,80" NÃO foi atingida.** Está em 0,333 (10 de 30). Saiu de zero, o que é progresso real e mensurável, mas não é a meta.
+2. Acurácia por caractere 0,719 também está abaixo da meta de 0,95. A CNN isolada faz 0,9435 em recortes exatos — a diferença é o que a detecção de caracteres ainda perde.
+3. O modelo avaliado é o `last.pt` da época ~30 de 40, não o `best.pt` final. Há margem não medida.
+4. Conjunto de 30 placas é pequeno: cada placa vale 3,3 pontos na acurácia por placa.
+5. Detecção de layout acerta 24 de 30 — cada erro corrompe a máscara de formato.
+6. `LIMIAR_CONFIANCA = 0,70` continua rejeitando tudo no pipeline clássico (conf_minima entre 0,196 e 0,563). Não recalibrado.
+
 **Pendências**
 
-- Avaliar o YOLO de caracteres treinado e comparar com a segmentação clássica.
-- Montar o conjunto Mercosul rotulado à mão (~25 fotos) — única forma de medir a meta "acurácia por placa > 0,80" no alvo real. **Ainda sem medição.**
-- Recalibrar `LIMIAR_CONFIANCA` (0,70 rejeitou 6/6 no Dia 5) a partir de dados com gabarito.
-- Trocar a chave hardcoded nos notebooks 01/03/04/05 por leitura de arquivo/variável de ambiente.
+- Fechar as 40 épocas do YOLO de caracteres (retomar do checkpoint no Drive) e reavaliar com o `best.pt` final.
+- Recalibrar `LIMIAR_CONFIANCA` com os dados de gabarito.
+- Trocar a chave hardcoded do Roboflow nos notebooks 01/03/04/05 por leitura de arquivo/variável de ambiente (a antiga já foi revogada; a nova nunca entrou no repo).
+- Corrigir no relatório a interpretação da análise de erros do Dia 2, à luz das anotações erradas descobertas hoje.
+- Ampliar o conjunto de gabarito, se sobrar tempo — 30 placas é pouco para separar 0,33 de 0,45.
 
 **Próximo passo**
-- Esperar as 40 épocas, avaliar, e montar o gabarito Mercosul.
+- Retomar o treino do YOLO até as 40 épocas, reavaliar, e escrever `RELATORIO.md` com a comparação dos dois métodos de segmentação como resultado central.
 
 ---
 
@@ -369,3 +415,6 @@ Anote aqui o que quebrou e como foi resolvido. Vira a seção "Limitações" do 
 | 6 | `colab drivemount` falha com `ValueError: mount failed` mesmo em sessão nova | Exige autenticação interativa — precisa ser rodado pelo Raphael no terminal dele, não pelo agente |
 | 6 | Chave do Roboflow hardcoded nos notebooks foi revogada (`401`) | Chave nova gravada só na VM (`/content/.roboflow_key`); notebook 06 lê de lá. Pendente trocar nos notebooks 01/03/04/05 |
 | 6 | `cnn_chars.keras` salvo pelo Keras 3.13 da VM não abre no Keras 3.10 local (venv é Python 3.9, `keras>=3.11` exige 3.11+) | `cnn_chars_compat.keras`: mesmo modelo com `quantization_config` removida do `config.json` interno |
+| 6 | Sessão do Colab caiu na época ~30 de 40 do YOLO de caracteres | Só o websocket caiu; a VM seguiu treinando. O checkpoint no Drive a cada 3 min (estratégia do Dia 1) preservou tudo — modelo recuperado sem refazer nenhuma época |
+| 6 | Dataset trafficbr tem caixas rotuladas "plate" que são carros inteiros (45-63% da imagem, razão 0,71-1,70) | Filtro por razão largura/altura (1,8-5,0) e fração máxima da imagem (25%) em `06_gabarito_mercosul.py`. Reinterpreta os piores casos do Dia 2 |
+| 6 | `conf` padrão de 0,25 no detector de caracteres deixava faltar caractere em 7 de 30 placas | `CONF_CARACTERE = 0,05` — a placa tem 7 caracteres e ficamos com os 7 de maior confiança, então falso positivo é barato. Completas: 23/30 → 29/30 |
