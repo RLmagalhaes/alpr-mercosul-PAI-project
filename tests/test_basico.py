@@ -88,3 +88,11 @@ def test_erros_por_posicao():
     reais = ["ABC1D23", "ABC1D23"]
     previstas = ["ABC1D20", "ABC1D20"]   # ambos erram a última posição
     assert erros_por_posicao(reais, previstas) == [0, 0, 0, 0, 0, 0, 2]
+
+
+def test_erros_por_posicao_conta_placa_nao_lida_em_todas_as_posicoes():
+    # mesmo critério de acuracia_caractere, que já contava a placa vazia
+    # como 7 erros — antes esta função pulava a predição vazia e as duas
+    # métricas discordavam sobre o mesmo caso
+    assert erros_por_posicao(["ABC1D23"], [""]) == [1, 1, 1, 1, 1, 1, 1]
+    assert acuracia_caractere(["ABC1D23"], [""]) == 0.0

@@ -144,7 +144,10 @@ for linha, r in enumerate(registros_teste[:4]):
     recorte = recortar_via_caixas(original, r["caixas"])
     colorida, _, realcada, binaria = preparar(recorte)
     layout, _ = detectar_layout(colorida)
-    fatias = segmentar(binaria, cinza=realcada)
+    # corte_superior=0.0: recortar_via_caixas() ja entrega SO a faixa dos
+    # caracteres, sem tarja. O default de 0.35 decapitava o topo de cada
+    # caractere antes da segmentacao comecar (ver DIARIO, Dia 6)
+    fatias = segmentar(binaria, cinza=realcada, corte_superior=0.0)
     mosaico = np.hstack(fatias)
     eixos[linha, 0].imshow(cv2.cvtColor(original, cv2.COLOR_BGR2RGB))
     eixos[linha, 0].set_title(f"original ({r['real']})", fontsize=8)
@@ -174,7 +177,10 @@ def ler_recorte(caminho_img, caixas, usar_mascara=True):
         return None
     colorida, _, realcada, binaria = preparar(recorte)
     layout, _ = detectar_layout(colorida)
-    fatias = segmentar(binaria, cinza=realcada)
+    # corte_superior=0.0: recortar_via_caixas() ja entrega SO a faixa dos
+    # caracteres, sem tarja. O default de 0.35 decapitava o topo de cada
+    # caractere antes da segmentacao comecar (ver DIARIO, Dia 6)
+    fatias = segmentar(binaria, cinza=realcada, corte_superior=0.0)
     lote = np.stack(fatias).astype("float32")[..., None]
     probs = cnn.predict(lote, verbose=0)
     idx = probs.argmax(axis=1)

@@ -14,6 +14,19 @@ TAMANHO_CARACTERE = (32, 32)
 CORTE_SUPERIOR = 0.35          # fração de cima descartada (tarja "BRASIL")
 N_CARACTERES = 7
 
+# Quanto cortar do topo depende do layout: a Mercosul tem a tarja azul
+# "BRASIL", a antiga tem a faixa cinza "CIDADE - UF", e as duas ocupam
+# frações diferentes da altura. Usar 0.35 pros dois casos (o que o
+# pipeline fazia até o Dia 5) cortava o topo dos caracteres da placa
+# antiga -- ver DIARIO, Dia 6.
+CORTE_POR_LAYOUT = {"mercosul": 0.35, "antiga": 0.30}
+
+# Diferença mínima entre o pixel mais claro e o mais escuro pra confiar no
+# Otsu de uma fatia. Num recorte justo de caractere sólido e estreito ("1",
+# "I") quase não sobra fundo dentro da caixa, e Otsu sem contraste devolve
+# a fatia inteira preta ou inteira branca.
+CONTRASTE_MINIMO = 25
+
 
 def recortar(img: np.ndarray, caixa, margem: float = 0.08) -> np.ndarray:
     """Recorta a região da caixa (x1, y1, x2, y2) com uma folga percentual."""
@@ -144,6 +157,28 @@ def _componentes_de_caracteres(faixa: np.ndarray, altura_min_frac: float = 0.5,
     return caixas
 
 
+def _apertar_vertical(faixa: np.ndarray, x: int, w: int) -> Tuple[int, int]:
+    """Remede (y, altura) pela tinta que existe dentro da coluna [x, x+w).
+
+    A CNN foi treinada com cada caractere recortado justo nos DOIS eixos
+    (ver `notebooks/04_cnn_caracteres.py`, que corta `img[y1:y2, x1:x2]`
+    pela caixa anotada). Até o Dia 5 a inferência recortava justo só em X
+    e mantinha a altura inteira da faixa, então o caractere chegava à rede
+    achatado e deslocado dentro do quadro de 32x32 -- diferente de tudo
+    que ela viu no treino. Medir aqui, e não confiar no (y, h) que veio de
+    `_componentes_de_caracteres`, resolve os três casos de uma vez: caixa
+    de componente conectado, caixa dividida no vale (que herda o y/h do
+    pai, largo demais) e caixa do fallback de fatias iguais.
+    """
+    coluna = faixa[:, x:x + w]
+    if coluna.size == 0:
+        return 0, faixa.shape[0]
+    linhas = np.where(coluna.any(axis=1))[0]
+    if len(linhas) == 0:                    # coluna sem tinta nenhuma
+        return 0, faixa.shape[0]
+    return int(linhas[0]), int(linhas[-1] - linhas[0] + 1)
+
+
 def _dividir_no_vale(perfil: np.ndarray, x: int, w: int) -> int:
     """Acha o corte mais provável dentro de [x, x+w) para separar dois
     caracteres grudados: o ponto de menor tinta, evitando as bordas (pra
@@ -155,7 +190,7 @@ def _dividir_no_vale(perfil: np.ndarray, x: int, w: int) -> int:
     return ini + int(np.argmin(perfil[ini:fim]))
 
 
-def _juntar_ou_dividir(caixas, n: int, perfil: np.ndarray):
+def _juntar_ou_dividir(caixas, n: int, perfil: np.ndarray, altura: int = 0):
     """Ajusta a lista de caixas pra ter exatamente n.
 
     Sobrou caixa (caracteres fragmentados em 2+ componentes, ex. traço
@@ -176,7 +211,10 @@ def _juntar_ou_dividir(caixas, n: int, perfil: np.ndarray):
     while len(caixas) < n:
         i = int(np.argmax([c[2] for c in caixas])) if caixas else 0
         if not caixas:
-            caixas = [(0, 0, len(perfil), len(perfil))]
+            # `altura` é a altura da faixa; sem ela, cai na largura do
+            # perfil (era o que estava aqui antes -- inofensivo enquanto o
+            # `h` era ignorado no recorte, errado depois que passou a valer)
+            caixas = [(0, 0, len(perfil), altura or len(perfil))]
         x, y, w, h = caixas[i]
         corte = _dividir_no_vale(perfil, x, w)
         corte = min(max(corte, x + 1), x + w - 1)
@@ -189,7 +227,8 @@ def segmentar(binaria: np.ndarray,
               n: int = N_CARACTERES,
               corte_superior: float = CORTE_SUPERIOR,
               saida: Tuple[int, int] = TAMANHO_CARACTERE,
-              cinza: np.ndarray = None) -> List[np.ndarray]:
+              cinza: np.ndarray = None,
+              margem_vertical: float = 0.0) -> List[np.ndarray]:
     """Divide a faixa dos caracteres em n recortes e padroniza o tamanho.
 
     Usa componentes conectados (blobs de tinta) pra achar cada caractere
@@ -214,7 +253,18 @@ def segmentar(binaria: np.ndarray,
     (recorte exato + Otsu local) errava quase tudo com Otsu global da
     placa inteira. Sem `cinza`, cada fatia sai da própria imagem binária.
 
-    Se as fatias saírem tortas, ajuste `corte_superior` entre 0.30 e 0.40.
+    Cada fatia é recortada justo nos DOIS eixos (`_apertar_vertical`), não
+    só em X -- é assim que os dados de treino da CNN foram gerados, e
+    recortar com a altura inteira da faixa entregava à rede um caractere
+    achatado e deslocado dentro do quadro de 32x32 (ver DIARIO, Dia 6).
+    `margem_vertical` devolve uma folga proporcional à altura do caractere,
+    já que a caixa anotada do treino é um pouco mais larga que o blob de
+    tinta puro.
+
+    `corte_superior` é uma fração da altura da imagem e assume que a
+    entrada é a placa INTEIRA (com a tarja no topo). Se a entrada já for só
+    a faixa dos caracteres, passe 0.0 -- senão o corte come o topo das
+    letras. Use `CORTE_POR_LAYOUT[layout]` quando o layout for conhecido.
     """
     faixa, perfil = projecao_vertical(binaria, corte_superior)
     largura = faixa.shape[1]
@@ -225,7 +275,7 @@ def segmentar(binaria: np.ndarray,
         caixas = [(round(i * largura_fatia), 0,
                   round((i + 1) * largura_fatia) - round(i * largura_fatia), faixa.shape[0])
                  for i in range(n)]
-    caixas = _juntar_ou_dividir(caixas, n, perfil)
+    caixas = _juntar_ou_dividir(caixas, n, perfil, faixa.shape[0])
 
     if cinza is not None:
         y0 = int(cinza.shape[0] * corte_superior)
@@ -234,13 +284,26 @@ def segmentar(binaria: np.ndarray,
         fonte = faixa
 
     fatias = []
-    for x, y, w, h in caixas:
-        pedaco = fonte[:, x:x + w]
+    for x, _, w, _ in caixas:
+        # o (y, h) que veio das caixas é descartado de propósito: depois de
+        # juntar/dividir ele pode estar largo demais. `_apertar_vertical`
+        # remede pela tinta, sempre na binária -- `faixa` e `fonte` têm a
+        # mesma origem e altura, então os índices valem pros dois.
+        y, h = _apertar_vertical(faixa, x, w)
+        folga = int(h * margem_vertical)
+        ya, yb = max(0, y - folga), min(fonte.shape[0], y + h + folga)
+        pedaco = fonte[ya:yb, x:x + w]
         if pedaco.size == 0:
             fatias.append(np.zeros(saida, dtype=np.uint8))
             continue
         if cinza is not None:
-            pedaco = cv2.threshold(pedaco, 0, 255,
-                                   cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+            if int(pedaco.max()) - int(pedaco.min()) >= CONTRASTE_MINIMO:
+                pedaco = cv2.threshold(pedaco, 0, 255,
+                                       cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+            else:
+                # sem contraste pra Otsu decidir: reaproveita a binarização
+                # da faixa inteira, que já é conhecida boa, em vez de
+                # devolver uma fatia chapada
+                pedaco = faixa[ya:yb, x:x + w]
         fatias.append(cv2.resize(pedaco, saida, interpolation=cv2.INTER_AREA))
     return fatias

@@ -15,7 +15,8 @@ from typing import Optional, Union
 import cv2
 import numpy as np
 
-from .preprocessamento import (detectar_layout, endireitar, preparar,
+from .preprocessamento import (CORTE_POR_LAYOUT, CORTE_SUPERIOR,
+                               detectar_layout, endireitar, preparar,
                                recortar, segmentar)
 from .validacao import CLASSES, aplicar_mascara
 
@@ -79,8 +80,11 @@ class LeitorDePlacas:
         # 4) segmentar (por componente conectado, não largura igual) e
         # classificar os 7 caracteres de uma vez -- Otsu LOCAL por fatia
         # (via `cinza=realcada`), não a placa inteira de uma vez só
-        # (ver DIARIO, Dia 5)
-        fatias = segmentar(binaria, cinza=realcada)
+        # (ver DIARIO, Dia 5). O corte do topo depende do layout: usar
+        # 0.35 pros dois formatos cortava o topo dos caracteres da placa
+        # antiga, que tem a faixa superior menor (ver DIARIO, Dia 6)
+        fatias = segmentar(binaria, cinza=realcada,
+                           corte_superior=CORTE_POR_LAYOUT.get(layout, CORTE_SUPERIOR))
         lote = np.stack(fatias).astype("float32")[..., None]
         probabilidades = self.cnn.predict(lote, verbose=0)
         indices = probabilidades.argmax(axis=1)
