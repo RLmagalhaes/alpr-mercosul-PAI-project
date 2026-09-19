@@ -52,7 +52,20 @@ os.makedirs(f"{RAIZ}/resultados/tabelas", exist_ok=True)
 os.system("pip -q install roboflow")
 from roboflow import Roboflow
 
-rf = Roboflow(api_key="LgH8VW8NaRGPfLvPXv95")
+# A chave do Roboflow NAO fica no codigo: este repositorio e publico.
+# Ela e lida da variavel de ambiente da VM ou de um arquivo criado na VM.
+# ATENCAO: a chave que estava escrita aqui ate o Dia 7 foi REVOGADA. Se voce
+# encontrar "LgH8VW8NaRGPfLvPXv95" no historico do Git e tentar usar,
+# vai receber "401 This API key does not exist or has been revoked" -- isso e
+# esperado, nao e bug. Gere uma chave nova em app.roboflow.com (Settings ->
+# API Keys) e disponibilize para a VM assim:
+#   echo 'open("/content/.roboflow_key","w").write("SUA_CHAVE")' | colab exec
+_chave = os.environ.get("ROBOFLOW_API_KEY")
+if not _chave and os.path.exists("/content/.roboflow_key"):
+    _chave = open("/content/.roboflow_key").read().strip()
+assert _chave, "Chave do Roboflow nao encontrada -- ver o comentario acima."
+
+rf = Roboflow(api_key=_chave)
 DADOS_CHARS = "/content/dados/caracteres"
 rf.workspace("project-swcsj").project("license-plate-character-extraction").version(2).download(
     "yolov8", location=DADOS_CHARS)

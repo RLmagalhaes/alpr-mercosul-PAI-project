@@ -27,3 +27,7 @@ _preview/
 
 # Trabalho de referencia de outra aluna (material de terceiros, nao entra no repo)
 t2/
+
+# Pasta de entrega — montada por notebooks/11_montar_entrega.py, 41 MB
+# (contem copias dos modelos e das imagens; o script regenera quando preciso)
+entrega/

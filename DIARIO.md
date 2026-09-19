@@ -4,7 +4,9 @@
 > Ao iniciar uma sessão, leia este arquivo antes de qualquer outra coisa.
 
 **Prazo de entrega:** menos de 1 semana a partir de 03/09 (prazo real da professora é ~1 mês após o fim das aulas, mas o Raphael está atrasado em relação ao roteiro de 7 dias).
-**Onde parei:** Dia 6 concluído. **A causa raiz do Dia 5 foi encontrada, e o gargalo real do projeto foi resolvido.** Primeiro: `corte_superior=0.35` decapitava o topo de cada caractere antes da segmentação (0,061 → 0,612 no dataset europeu ao corrigir). Segundo, e mais importante: mesmo corrigido, a segmentação por componentes conectados tem teto baixo — acha exatamente 7 blobs em só 4 de 14 placas. Substituída por um **YOLO detector de caracteres**, treinado sobre as 32.225 caixas já anotadas. Medido em **30 placas brasileiras com gabarito humano** (o conjunto que faltava desde o Dia 5): acurácia por caractere **0,300 → 0,719**, por placa **0/30 → 10/30**. Próximo: fechar as 40 épocas do YOLO (parou na ~30 por queda de sessão) e escrever o relatório.
+**Onde parei:** **Dia 7 — projeto entregue e em pausa.** A pasta `entrega/` está fechada e conferida; o repositório foi limpo, o README reescrito com os números reais e `docs/RETOMAR.md` criado para a retomada. Para continuar, leia `docs/RETOMAR.md` — não este arquivo inteiro.
+
+**Histórico do Dia 6:** Dia 6 concluído. **A causa raiz do Dia 5 foi encontrada, e o gargalo real do projeto foi resolvido.** Primeiro: `corte_superior=0.35` decapitava o topo de cada caractere antes da segmentação (0,061 → 0,612 no dataset europeu ao corrigir). Segundo, e mais importante: mesmo corrigido, a segmentação por componentes conectados tem teto baixo — acha exatamente 7 blobs em só 4 de 14 placas. Substituída por um **YOLO detector de caracteres**, treinado sobre as 32.225 caixas já anotadas. Medido em **30 placas brasileiras com gabarito humano** (o conjunto que faltava desde o Dia 5): acurácia por caractere **0,300 → 0,719**, por placa **0/30 → 10/30**. Próximo: fechar as 40 épocas do YOLO (parou na ~30 por queda de sessão) e escrever o relatório.
 
 **Decisão de escopo (registro interno, não sai no relatório pra professora):** dado o atraso, a entrega vai fechar o pipeline completo de visão computacional (detecção → pré-processamento → segmentação → CNN de caracteres → regra de formato), cortando a parte de produção (Dia 6: ONNX, API, Docker, latência) e os slides. Isso **não aparece como corte** em nenhum material voltado à professora (RELATORIO.md, README.md, notebooks) — lá o projeto entregue é descrito como se fosse o escopo original. `api/`, `Dockerfile` e as dependências de ONNX continuam no repo, sem uso, como continuação pessoal de aprendizado do Raphael depois da entrega. Ver plano completo em `/Users/raphaelmagalhaes/.claude/plans/eu-j-estou-atrasado-groovy-squirrel.md`.
 
@@ -362,34 +364,96 @@ A sessão do Colab caiu por volta da época 30. O `colab exec` perdeu a sessão 
 
 ---
 
-## Dia 6 (escopo original) — ONNX, API e latência
+## Dia 6 (escopo original) — ONNX, API e latência ❌ NÃO EXECUTADO
 
-**Objetivo:** o sistema virando serviço.
+**Cortado do escopo** na decisão registrada no topo deste arquivo, por causa do
+atraso em relação ao roteiro. Nenhuma métrica de latência foi medida, e nada
+disso aparece em material voltado à professora — o `RELATORIO.pdf` entregue não
+menciona API, ONNX nem latência em lugar nenhum (conferido no Dia 7).
 
-**O que foi feito**
-_(preencher)_
+`api/app.py`, `api/Dockerfile` e as dependências de ONNX continuam no
+repositório, sem uso. O `app.py` está escrito mas nunca foi executado, e ainda
+instancia `LeitorDePlacas` (a rota clássica, acurácia 0,300) em vez de
+`LeitorDePlacasYOLO` (a rota final, 0,719).
 
-**Métricas obtidas**
-_(preencher — latência média/p50/p95 em Keras e ONNX, limiar de confiança escolhido)_
-
-**Decisões**
-_(preencher)_
-
-**Próximo passo**
-_(preencher)_
+**Para retomar:** `docs/RETOMAR.md`, seção 4.6.
 
 ---
 
-## Dia 7 — Relatório e slides
+## Dia 7 — Relatório, entrega e organização do repositório ✅
+
+**Objetivo:** fechar a entrega para a professora e deixar o projeto em estado de
+pausa organizada, para ser retomado meses depois sem redescobrir nada.
 
 **O que foi feito**
-_(preencher)_
+
+1. **Relatório em duas versões, de um Markdown só.**
+   `notebooks/10_gerar_html_relatorio.py` passou a gerar dois arquivos a partir
+   do mesmo `RELATORIO.md`: `RELATORIO.html` (completo, fica no repositório) e
+   `RELATORIO_entrega.html` (sem as seções 6.4 Trabalhos futuros e 6.5
+   Considerações de privacidade, que o Raphael preferiu não enviar). O corte é
+   declarado numa lista no topo do script (`SECOES_FORA_DA_ENTREGA`), não editado
+   à mão — o Markdown continua sendo a única fonte da verdade.
+
+2. **Pasta `entrega/` consertada.** Três defeitos reais:
+   - O PDF nunca era copiado: o script procurava exatamente `RELATORIO.pdf`, mas
+     o navegador salva com o título da página. Resolvido com `achar_pdf()`, que
+     varre a raiz.
+   - A entrega levava o HTML completo, não o cortado.
+   - O `LEIA-ME.md` apontava para "a seção 6.5 do relatório", que deixou de
+     existir na versão entregue.
+   Conferido extraindo o texto das 12 páginas do PDF: 6.3 e o Anexo presentes,
+   6.4 e 6.5 ausentes. **A entrega está coerente.**
+
+3. **Chave do Roboflow removida do código.** As 4 ocorrências hardcoded nos
+   notebooks 01/03/04/05 (pendência aberta desde o Dia 6) foram trocadas pelo
+   mesmo padrão do notebook 06: `ROBOFLOW_API_KEY` ou `/content/.roboflow_key`.
+   **Decisão: o histórico do Git NÃO foi reescrito.** A chave está revogada
+   (retorna 401), e reescrever 21 commits quebraria o remote sem ganho real de
+   segurança. Em troca, o fato ficou registrado em três lugares, para que um 401
+   futuro seja diagnosticado em segundos: no comentário de cada notebook, no
+   README e em `docs/RETOMAR.md` §5.
+
+4. **README reescrito.** Estava com a tabela de resultados em "(preencher)",
+   prometia 14 testes (são 28), descrevia o pipeline pela rota clássica que foi
+   substituída, e trazia um exemplo de resposta da API com uma latência
+   (`"tempo_ms": 143.2`) que nunca foi medida. O número inventado saiu.
+
+5. **`docs/RETOMAR.md` criado** — a peça que faltava para o projeto poder ficar
+   parado. Sete seções: estado atual, como voltar a rodar em 5 minutos, o mapa
+   do código, as 8 pendências ordenadas por retorno/esforço (cada uma com onde
+   mexer e como medir se melhorou), as armadilhas que custaram tempo, onde está
+   cada documento, e por onde começar numa retomada.
+
+6. **Limpeza.** Removidas `_to_delete/` (1,2 MB de locks do git), `_preview/`
+   (5,8 MB) e `t2/` (8,3 MB, trabalho de outra aluna). Antes de apagar, os 3 PNGs
+   de `_preview/` que não tinham cópia idêntica em `resultados/figuras/` foram
+   movidos para `docs/figuras_exploratorias/`, com um LEIA-ME explicando o que
+   são — ficam fora de `resultados/figuras/` para não invalidar a contagem de
+   13 figuras citada no relatório.
 
 **Entregues**
-- [ ] `RELATORIO.pdf`
-- [ ] 10 slides
-- [ ] Repositório limpo e público
-- [ ] Seção de privacidade escrita
+- [x] `RELATORIO.pdf` — 12 páginas, em `entrega/RELATORIO.pdf`
+- [ ] 10 slides — **cortados do escopo** (decisão do topo deste arquivo)
+- [x] Repositório limpo e público
+- [x] Seção de privacidade escrita — no `LEIA-ME.md` da entrega e no README;
+      no relatório era a 6.5, retirada da versão da professora a pedido do Raphael
+
+**A entrega, conferida**
+
+`entrega/` — 42 MB: `RELATORIO.pdf`, `RELATORIO.html`, `ALPR_Mercosul.ipynb`,
+`LEIA-ME.md`, `requirements.txt`, `src/` (5 módulos), `modelos/` (3 pesos,
+29 MB), `imagens_exemplo/` (as 30 placas do gabarito), `resultados/tabelas/`
+(18 CSVs + 4 JSONs) e `resultados/figuras/` (13 PNGs). Os 28 testes passam.
+
+**Pendências que ficam abertas** (todas documentadas em `docs/RETOMAR.md`)
+
+- `chars_best.pt` é o checkpoint da época ~30 de 40 — a de maior retorno.
+- `LIMIAR_CONFIANCA = 0,70` nunca recalibrado.
+- Gabarito de 30 placas é pequeno; cada placa vale 3,3 pontos.
+- `api/` escrito mas não executado, e ligado ao pipeline clássico.
+
+**Próximo passo:** projeto em pausa. Ao retomar, ler `docs/RETOMAR.md` §7.
 
 ---
 

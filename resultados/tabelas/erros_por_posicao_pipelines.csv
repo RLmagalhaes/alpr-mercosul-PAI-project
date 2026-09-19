@@ -1,0 +1,7 @@
+pipeline,regra,pos1,pos2,pos3,pos4,pos5,pos6,pos7,total_erros,acc_caractere
+A) classico (segmentar),sem regra,24,18,21,19,21,25,25,153,0.2714
+A) classico (segmentar),com regra,24,18,21,17,21,23,23,147,0.3
+B) YOLO caixas + CNN,sem regra,12,10,15,16,13,15,14,95,0.5476
+B) YOLO caixas + CNN,com regra,10,9,13,13,13,12,10,80,0.619
+C) YOLO caixa+classe,sem regra,8,11,11,16,14,13,7,80,0.619
+C) YOLO caixa+classe,com regra,5,9,9,11,10,11,4,59,0.719

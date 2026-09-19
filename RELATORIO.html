@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relatório — ALPR Mercosul</title>
+<style>
+@page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+
+:root {
+  --tinta:      #1a1a1a;
+  --tinta-fraca:#555;
+  --linha:      #d0d0d0;
+  --fundo-th:   #f0f0f0;
+  --fundo-cod:  #f6f6f6;
+  --destaque:   #1f4e79;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: "Charter", "Georgia", "Times New Roman", serif;
+  font-size: 10.5pt;
+  line-height: 1.55;
+  color: var(--tinta);
+  max-width: 185mm;
+  margin: 0 auto;
+  padding: 12mm 8mm;
+  background: #fff;
+  text-align: justify;
+  hyphens: auto;
+}
+
+/* ---------- titulos ---------- */
+
+h1 {
+  font-size: 19pt;
+  line-height: 1.25;
+  text-align: left;
+  margin: 0 0 4mm 0;
+  padding-bottom: 3mm;
+  border-bottom: 2.5px solid var(--destaque);
+  color: var(--destaque);
+}
+
+h2 {
+  font-size: 14pt;
+  text-align: left;
+  margin: 9mm 0 3mm 0;
+  padding-bottom: 1.5mm;
+  border-bottom: 1px solid var(--linha);
+  color: var(--destaque);
+  page-break-after: avoid;
+}
+
+h3 {
+  font-size: 11.5pt;
+  text-align: left;
+  margin: 6mm 0 2mm 0;
+  color: var(--tinta);
+  page-break-after: avoid;
+}
+
+/* cada secao numerada comeca em pagina nova, menos a primeira */
+h2 { page-break-before: always; }
+h2:first-of-type { page-break-before: avoid; }
+
+p { margin: 0 0 2.5mm 0; orphans: 3; widows: 3; }
+
+/* ---------- cabecalho do documento ---------- */
+
+h1 + p {
+  text-align: left;
+  color: var(--tinta-fraca);
+  font-size: 10pt;
+  line-height: 1.7;
+}
+
+blockquote {
+  margin: 4mm 0;
+  padding: 2.5mm 4mm;
+  border-left: 3px solid var(--destaque);
+  background: #f7f9fb;
+  color: var(--tinta-fraca);
+  font-size: 9.5pt;
+  text-align: left;
+}
+blockquote p { margin: 0; }
+
+/* ---------- tabelas ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 3.5mm 0 4.5mm 0;
+  font-size: 9pt;
+  page-break-inside: avoid;
+}
+
+thead { display: table-header-group; }
+
+th, td {
+  border: 1px solid var(--linha);
+  padding: 1.6mm 2.2mm;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: var(--fundo-th);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* colunas numericas: da segunda em diante, centralizadas */
+td:not(:first-child), th:not(:first-child) { text-align: center; }
+
+tbody tr:nth-child(even) { background: #fbfbfb; }
+
+/* ---------- codigo ---------- */
+
+pre {
+  background: var(--fundo-cod);
+  border: 1px solid var(--linha);
+  border-radius: 2px;
+  padding: 3mm;
+  font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  font-size: 8.5pt;
+  line-height: 1.45;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  page-break-inside: avoid;
+  text-align: left;
+}
+
+code {
+  font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  font-size: 9pt;
+  background: var(--fundo-cod);
+  padding: 0.3mm 1mm;
+  border-radius: 2px;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- listas ---------- */
+
+ul, ol { margin: 0 0 3mm 0; padding-left: 6mm; }
+li { margin-bottom: 1.2mm; }
+
+hr { border: none; border-top: 1px solid var(--linha); margin: 6mm 0; }
+
+strong { font-weight: 700; }
+
+/* ---------- impressao ---------- */
+
+@media print {
+  body { padding: 0; max-width: none; }
+  a { color: var(--tinta); text-decoration: none; }
+}
+</style>
+</head>
+<body>
+<h1>Reconhecimento Automático de Placas Veiculares Brasileiras (ALPR Mercosul)</h1>
+<p><strong>Disciplina:</strong> Processamento e Análise de Imagens — Pós-Graduação
+<strong>Autor:</strong> Raphael Magalhães · <strong>Data:</strong> setembro de 2026 · <strong>Repositório:</strong> <code>alpr-mercosul</code></p>
+<blockquote>
+<p>Todos os números deste relatório foram produzidos por código executado e estão
+gravados em <code>resultados/tabelas/</code>. Nenhum valor foi estimado.</p>
+</blockquote>
+<h2>1. Introdução</h2>
+<p><strong>ALPR</strong> (<em>Automatic License Plate Recognition</em>) é a tarefa de, a partir da fotografia
+de um veículo, devolver o texto da sua placa. Tem aplicação direta em controle de
+acesso, pedágio automático, fiscalização e inventário de frota.</p>
+<p>Este trabalho constrói o pipeline completo — da foto ao texto — em seis etapas
+(detecção, recorte, pré-processamento, localização dos caracteres, classificação e
+validação por formato) e o mede de ponta a ponta contra um gabarito transcrito por
+humano.</p>
+<p>O resultado principal não é uma métrica, é um <strong>diagnóstico</strong>: as métricas por etapa
+eram boas (0,992 de mAP na detecção, 0,9435 de acurácia na CNN) <strong>enquanto o sistema
+completo lia zero placas corretamente</strong>. A investigação desse zero mostrou que o
+gargalo estava numa única etapa — a segmentação dos caracteres — e substituí-la
+dobrou a acurácia por caractere e tirou a acurácia por placa do zero.</p>
+<h2>2. O problema</h2>
+<h3>2.1 A tarefa</h3>
+<p>Dada a foto de um veículo, produzir a string de 7 caracteres da placa. A dificuldade
+não está em "ler texto": está em que a placa é um objeto <strong>minúsculo</strong> dentro de uma
+cena complexa — área mediana de <strong>1,26%</strong> da imagem no treino e <strong>0,70%</strong> no teste.</p>
+<h3>2.2 Os dois formatos brasileiros</h3>
+<p>O Brasil convive com dois padrões, e essa convivência é central para o trabalho:</p>
+<table>
+<thead>
+<tr>
+<th>Padrão</th>
+<th>Máscara</th>
+<th>Exemplo</th>
+<th>Marca visual</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mercosul (desde 2018)</td>
+<td>3 letras · 1 dígito · 1 letra · 2 dígitos (<code>LLLDLDD</code>)</td>
+<td><code>ABC1D23</code></td>
+<td>tarja azul com "BRASIL"</td>
+</tr>
+<tr>
+<td>Brasileiro antigo</td>
+<td>3 letras · 4 dígitos (<code>LLLDDDD</code>)</td>
+<td><code>ABC1234</code></td>
+<td>tarja com estado e cidade</td>
+</tr>
+</tbody>
+</table>
+<p>Ambos têm 7 caracteres, mas <strong>a tipagem de cada posição difere</strong>. Isso é conhecimento
+de domínio explorável: sabendo o layout, a quinta posição de uma placa Mercosul <em>só
+pode</em> ser letra. Um <code>0</code> previsto ali é corrigível sem treinar nada a mais.</p>
+<h3>2.3 As bases de dados</h3>
+<p>Duas bases públicas do Roboflow Universe, porque as duas etapas exigem anotações
+incompatíveis — detecção precisa de veículos com a placa demarcada; reconhecimento
+precisa de cada caractere demarcado.</p>
+<p><strong>Detecção</strong> — <code>trafficbr/vehicle-plate-color</code> v2, classe única <code>plate</code>, imagens 416×416:</p>
+<table>
+<thead>
+<tr>
+<th>Split</th>
+<th>Imagens</th>
+<th>Caixas</th>
+<th>Área mediana da placa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>train</td>
+<td>12.780</td>
+<td>13.386</td>
+<td>1,26%</td>
+</tr>
+<tr>
+<td>valid</td>
+<td>960</td>
+<td>995</td>
+<td>0,89%</td>
+</tr>
+<tr>
+<td>test</td>
+<td>257</td>
+<td>268</td>
+<td>0,70%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Caracteres</strong> — <code>project-swcsj/license-plate-character-extraction</code> v2 (licença MIT),
+com cada caractere anotado individualmente: <strong>31.718 caracteres válidos</strong> em 36
+classes (train 30.530 · valid 958 · test 230), mais 1.752 anotações descartadas por
+não serem caractere de placa (<code>EUR</code>, a tarja europeia, e o hífen <code>-</code>).</p>
+<h3>2.4 Metas</h3>
+<table>
+<thead>
+<tr>
+<th>Meta</th>
+<th>Alvo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mAP@0.5 na detecção</td>
+<td>&gt; 0,90</td>
+</tr>
+<tr>
+<td>Acurácia por caractere</td>
+<td>&gt; 0,95</td>
+</tr>
+<tr>
+<td>Acurácia por placa (os 7 corretos)</td>
+<td>&gt; 0,80</td>
+</tr>
+</tbody>
+</table>
+<h2>3. Dificuldades</h2>
+<h3>3.1 Nenhuma base traz o texto da placa</h3>
+<p>As duas bases anotam <em>caixas</em>, não <em>texto</em> — exatamente o que o sistema deve produzir.
+Sem isso não existe acurácia por placa. Foi construído um conjunto próprio: <strong>30
+placas brasileiras (16 Mercosul, 14 do formato antigo) com o texto transcrito e
+conferido por humano</strong>.</p>
+<p>Um cuidado metodológico foi decisivo: em 6 das 30 placas, distinguir <code>O</code> de <code>0</code> só era
+possível <em>aplicando a regra de formato</em> — mas o sistema avaliado também usa essa regra.
+Um gabarito assim seria <strong>circular</strong> e inflaria a acurácia. As 8 transcrições duvidosas
+foram conferidas independentemente por humano.</p>
+<h3>3.2 Defeitos nos dados</h3>
+<p>A postura foi <strong>registrar os defeitos, não contorná-los com heurísticas</strong>:</p>
+<ol>
+<li><strong>Anotações grosseiramente erradas na base de detecção.</strong> As 12 maiores caixas
+   rotuladas <code>plate</code> ocupam 45–63% da imagem com razão largura/altura de 0,71 a 1,70:
+   <strong>são carros inteiros.</strong> Uma placa real tem razão mediana 2,20. Isso obrigou a
+   filtrar por geometria e, como se verá em 5.1, reinterpreta a análise de erros da
+   detecção.</li>
+<li><strong>Caracteres deformados na origem.</strong> A base de caracteres foi pré-processada com
+   <em>"Resize to 640×640 (Stretch)"</em> — cada imagem esticada sem preservar proporção. A
+   distorção não é uniforme e a proporção original não é recuperável.</li>
+<li><strong>Ruído de rótulo.</strong> A inspeção visual encontrou ao menos um caractere rotulado <code>O</code>
+   que mostra um <code>H</code>. Não houve filtragem manual de ~31 mil recortes; o ruído é
+   assumido como fonte honesta de erro herdada pelo classificador.</li>
+<li><strong>Desbalanceamento severo.</strong> <code>Q</code> tem 120 exemplos e <code>O</code> tem 228, contra 400–2.100
+   das demais. Como ambos são visualmente próximos do dígito <code>0</code>, isso foi apontado
+   como risco <strong>antes</strong> do treino — e a previsão se confirmou (seção 5.2).</li>
+</ol>
+<h3>3.3 O gargalo: a segmentação clássica tem teto</h3>
+<p>Medido o pipeline completo pela primeira vez, a acurácia por placa foi <strong>zero</strong>.
+A investigação encontrou dois problemas de natureza bem diferente.</p>
+<p><strong>Um erro de recorte.</strong> A constante <code>corte_superior = 0,35</code>, criada para descartar a
+tarja "BRASIL", estava sendo aplicada <strong>mesmo quando a entrada já era apenas a faixa
+dos caracteres</strong>. Numa imagem de 200×62 px, isso começa a segmentar na linha 21 quando
+os caracteres começam por volta da linha 6: <strong>o terço superior de cada caractere era
+descartado antes da classificação.</strong> Isso explica as predições anteriores cheias de
+<code>I</code>, <code>1</code>, <code>4</code>, <code>L</code> e <code>P</code> — as formas que sobram de um caractere sem topo.</p>
+<table>
+<thead>
+<tr>
+<th>Variante (ablação)</th>
+<th><code>corte_superior</code></th>
+<th>Acc. caractere</th>
+<th>Acc. placa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>baseline</td>
+<td>0,35</td>
+<td>0,0612</td>
+<td>0,000</td>
+</tr>
+<tr>
+<td><strong>só <code>corte_superior = 0</code></strong></td>
+<td>0,00</td>
+<td><strong>0,6122</strong></td>
+<td><strong>0,2143</strong></td>
+</tr>
+<tr>
+<td>só aperto vertical</td>
+<td>0,35</td>
+<td>0,1224</td>
+<td>0,000</td>
+</tr>
+<tr>
+<td><code>corte = 0</code> + aperto + folga</td>
+<td>0,00</td>
+<td>0,6122</td>
+<td>0,2143</td>
+</tr>
+</tbody>
+</table>
+<p>Um único parâmetro respondeu por praticamente todo o ganho — 0,061 para 0,612.</p>
+<p><strong>Um limite do método.</strong> Mesmo corrigido o recorte, a segmentação por componentes
+conectados encontra <strong>exatamente 7 blobs em apenas 4 de 14 placas</strong>. Elevar a
+resolução melhora e satura:</p>
+<table>
+<thead>
+<tr>
+<th>Resolução intermediária</th>
+<th>Placas com exatamente 7 blobs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200×62 (original)</td>
+<td>4 de 14</td>
+</tr>
+<tr>
+<td>400×124</td>
+<td>6 de 14</td>
+</tr>
+<tr>
+<td>600×186</td>
+<td>8 de 14</td>
+</tr>
+<tr>
+<td>com abertura morfológica</td>
+<td>praticamente sem efeito</td>
+</tr>
+</tbody>
+</table>
+<p>Depois da binarização, os caracteres se encostam uns nos outros e na moldura: um
+componente conectado <strong>não corresponde</strong> a um caractere. <strong>É o teto do método, não um
+parâmetro mal ajustado</strong> — nenhum ajuste contorna isso. Foi o que motivou a solução
+descrita a seguir.</p>
+<h2>4. Solução proposta</h2>
+<pre><code>foto do veículo
+  └─&gt; [1] YOLO11n detecta a placa
+       └─&gt; [2] recorte com margem de 8% + endireitamento
+            └─&gt; [3] localização dos 7 caracteres
+                 ├── (A) clássica: cinza + CLAHE + Otsu + componentes conectados
+                 └── (C) aprendida: YOLO11n detector de caracteres
+                 └─&gt; [4] classificação de cada caractere
+                      ├── CNN de 36 classes, ou
+                      └── a própria classe dada pelo detector
+                      └─&gt; [5] regra do formato (máscara por layout)
+                           └─&gt; &quot;ABC1D23&quot;
+</code></pre>
+<p>A etapa [3] foi implementada de <strong>duas formas independentes</strong>, e a comparação entre
+elas é o experimento central (seção 5.4).</p>
+<p><strong>[1] Detecção.</strong> YOLO11n treinado por 40 épocas em GPU T4 do Colab. O modelo mais leve
+da família foi escolhido deliberadamente: o objeto é único, de uma classe e de
+geometria muito regular. Sai a caixa de maior confiança, com margem de 8% para não
+cortar caracteres na borda.</p>
+<p><strong>[2] Endireitamento.</strong> <code>endireitar()</code> estima a inclinação via <code>cv2.minAreaRect</code> sobre
+o maior contorno e aplica rotação afim. Corrige rotação <em>no plano</em>, não perspectiva —
+a correção adequada exigiria os 4 cantos da placa, que nenhuma base anota.</p>
+<p><strong>[3-A] Segmentação clássica.</strong> Escala de cinza → <strong>CLAHE</strong> (<code>clipLimit=2.0</code>,
+<code>tileGridSize=(8,8)</code>) → <strong>Otsu</strong> invertido → componentes conectados, com junção e
+divisão por vales da projeção vertical até fechar 7 blocos → normalização para 32×32.
+O CLAHE foi preferido à equalização global porque a placa costuma ter iluminação
+desigual (sombra de um lado, reflexo do outro); a global amplificaria o ruído do fundo.</p>
+<p><strong>[3-C] Detecção aprendida de caracteres.</strong> Um segundo YOLO11n treinado sobre as
+<strong>32.225 caixas de caractere</strong> já anotadas, com 38 classes. Recebe o recorte da placa e
+devolve a caixa <strong>e</strong> a classe de cada caractere — sem binarização, sem componentes
+conectados, sem supor que os caracteres estejam separados.</p>
+<p>O limiar usado é <strong><code>conf = 0,05</code></strong>, muito abaixo do usual 0,25. A escolha é medida
+(seção 5.5): como a placa tem exatamente 7 caracteres e o sistema fica com os 7 mais
+confiantes, um falso positivo é barato — o caro é <em>faltar</em> caractere, que estraga a
+leitura inteira e ainda invalida a regra de formato.</p>
+<p><strong>[4] CNN de caracteres.</strong> Rede pequena treinada do zero, <strong>359.588 parâmetros</strong>: 3
+blocos <code>Conv2D + MaxPooling</code>, <code>Dense(128)</code>, <code>Dropout(0.3)</code> e <code>softmax</code> de 36 classes.
+Entrada 32×32×1 binarizada.</p>
+<p><strong>[5] Regra do formato.</strong> O layout é detectado pela <strong>tarja azul</strong> (fração de pixels
+azuis em HSV), método que não depende do acerto do classificador. Com o layout,
+<code>aplicar_mascara()</code> troca caracteres impossíveis pelo equivalente visual:</p>
+<pre><code>posição exige LETRA  →  0→O  1→I  2→Z  4→A  5→S  6→G  7→T  8→B
+posição exige DÍGITO →  O→0  Q→0  D→0  I→1  L→1  Z→2  A→4  S→5  G→6  T→7  B→8
+</code></pre>
+<p>São 15 linhas derivadas da legislação, com zero parâmetros treinados.</p>
+<p><strong>Métricas.</strong> mAP@0.5 e mAP@0.5:0.95 na detecção (IoU implementado do zero e testado);
+<strong>acurácia por caractere</strong> (fração das 210 posições corretas); <strong>acurácia por placa</strong>
+(as 7 corretas — é o que importa na prática: 6 de 7 não abre a cancela); <strong>erros por
+posição</strong>, para separar falha de localização de confusão de classe.</p>
+<h2>5. Resultados</h2>
+<h3>5.1 Detecção da placa (teste: 257 imagens)</h3>
+<table>
+<thead>
+<tr>
+<th>Métrica</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>mAP@0.5</strong></td>
+<td><strong>0,992</strong></td>
+</tr>
+<tr>
+<td>mAP@0.5:0.95</td>
+<td>0,8344</td>
+</tr>
+<tr>
+<td>Precisão / Recall</td>
+<td>0,9776 / 0,9768</td>
+</tr>
+</tbody>
+</table>
+<p>Meta superada com folga. A distância entre 0,992 e 0,8344 é informativa: o detector
+<strong>encontra</strong> quase todas as placas, mas o ajuste fino da caixa é menos preciso — o que
+é aceitável, já que a etapa seguinte aplica margem de 8% de qualquer modo.</p>
+<p>Apenas 2 das 257 placas não foram detectadas. Os piores casos por IoU (0,000 a 0,021)
+foram inicialmente lidos como falha do detector; a investigação das anotações (seção
+3.2) mostrou que <strong>boa parte são anotações erradas da base</strong>, em que a referência marca
+o veículo inteiro. <strong>O IoU é baixo porque o gabarito está errado, não porque o detector
+falhou</strong> — o desempenho real é melhor do que aquelas linhas sugerem.</p>
+<h3>5.2 CNN de caracteres — o efeito do balanceamento</h3>
+<table>
+<thead>
+<tr>
+<th>Rodada</th>
+<th>Ajuste</th>
+<th>Acurácia (teste)</th>
+<th>Épocas</th>
+<th>Q e O</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1ª</td>
+<td>sem peso de classe</td>
+<td>0,9348</td>
+<td>13</td>
+<td><strong>0% de recall nas duas</strong></td>
+</tr>
+<tr>
+<td>2ª</td>
+<td><code>class_weight</code> balanceado</td>
+<td><strong>0,9435</strong></td>
+<td>26</td>
+<td>O: 100% · Q: 33%</td>
+</tr>
+</tbody>
+</table>
+<p>A previsão feita na análise dos dados se confirmou exatamente: <strong>as duas classes mais
+raras do treino foram as duas que o modelo sem balanceamento ignorou por completo.</strong> O
+balanceamento (peso = <code>total / (36 × contagem)</code>, uma linha no <code>fit()</code>) resolveu Q e O,
+mas cobrou preço: o recall do dígito <code>0</code> caiu para 0,56, porque a classe <code>O</code> passou a
+"roubar" exemplos dele. Não é resultado limpo — é deslocamento do erro.</p>
+<p><strong>Limitação honesta:</strong> o teste tem apenas <strong>230 caracteres para 36 classes</strong> — <code>Q</code>
+aparece 3 vezes e <code>O</code> apenas 1. Não é possível afirmar se o recall de 33% em <code>Q</code> é
+representativo ou ruído. A decisão foi <strong>parar de ajustar hiperparâmetros</strong>, porque
+seguir seria otimizar sobre ruído de 1 a 3 exemplos.</p>
+<h3>5.3 Detector de caracteres, isoladamente</h3>
+<table>
+<thead>
+<tr>
+<th>Split</th>
+<th>Imagens</th>
+<th>mAP@0.5</th>
+<th>mAP@0.5:0.95</th>
+<th>Precisão</th>
+<th>Recall</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>valid</td>
+<td>144</td>
+<td>0,8678</td>
+<td>0,6395</td>
+<td>0,8733</td>
+<td>0,8037</td>
+</tr>
+<tr>
+<td><strong>test</strong></td>
+<td>36</td>
+<td><strong>0,9305</strong></td>
+<td>0,7029</td>
+<td>0,9284</td>
+<td>0,8621</td>
+</tr>
+</tbody>
+</table>
+<p>O recall de 0,862 no teste é o número a reter: <strong>ele ainda perde ~14% dos caracteres</strong>,
+e é daí que vem boa parte do erro remanescente do sistema.</p>
+<h3>5.4 O experimento central — as mesmas 30 placas</h3>
+<table>
+<thead>
+<tr>
+<th>Pipeline</th>
+<th>Acc. caractere (sem regra)</th>
+<th>Acc. caractere (com regra)</th>
+<th>Acc. placa (sem regra)</th>
+<th>Acc. placa (com regra)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A)</strong> clássico (<code>segmentar</code>) + CNN</td>
+<td>0,2714</td>
+<td>0,3000</td>
+<td>0/30</td>
+<td>0/30</td>
+</tr>
+<tr>
+<td><strong>B)</strong> YOLO só para as <strong>caixas</strong> + a <strong>mesma</strong> CNN</td>
+<td>0,5476</td>
+<td>0,6190</td>
+<td>2/30</td>
+<td>7/30 (0,2333)</td>
+</tr>
+<tr>
+<td><strong>C)</strong> YOLO dá caixa <strong>e</strong> classe</td>
+<td>0,6190</td>
+<td><strong>0,7190</strong></td>
+<td>4/30</td>
+<td><strong>10/30 (0,3333)</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>O experimento B é o que prova a tese.</strong> Mantendo a CNN <em>idêntica</em> dos dois lados e
+trocando <strong>apenas</strong> a forma de localizar os caracteres, a acurácia por caractere
+<strong>dobra</strong> (0,300 → 0,619) e a acurácia por placa sai de zero para 7 em 30. O gargalo
+era a <strong>segmentação</strong> — não a CNN, não a base, não o detector de placas. O passo C, que
+troca também o classificador, acrescenta mais 10 pontos.</p>
+<h3>5.5 A regra de formato e o limiar de confiança</h3>
+<p>A regra rendeu <strong>+10,0 pontos</strong> de acurácia por caractere no pipeline C (0,619 →
+0,719), contra apenas <strong>+2,9</strong> no pipeline A. A leitura é direta: <strong>a regra de formato
+só conserta leitura que já está quase certa.</strong> Sobre uma segmentação ruim ela não tem o
+que corrigir — troca um caractere errado por outro caractere errado do tipo certo.</p>
+<p>Varredura do limiar do detector de caracteres:</p>
+<table>
+<thead>
+<tr>
+<th><code>conf</code></th>
+<th>Placas com 7 caracteres</th>
+<th>Acc. caractere</th>
+<th>Acc. placa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>0,05</strong></td>
+<td><strong>29/30</strong></td>
+<td><strong>0,7190</strong></td>
+<td><strong>0,3333</strong></td>
+</tr>
+<tr>
+<td>0,10</td>
+<td>27/30</td>
+<td>0,6952</td>
+<td>0,3000</td>
+</tr>
+<tr>
+<td>0,25 (padrão)</td>
+<td>23/30</td>
+<td>0,6571</td>
+<td>0,2333</td>
+</tr>
+<tr>
+<td>0,50</td>
+<td>8/30</td>
+<td>0,4810</td>
+<td>0,1667</td>
+</tr>
+</tbody>
+</table>
+<p>O padrão da biblioteca (0,25) custaria 7 pontos de acurácia por caractere e 10 de
+acurácia por placa.</p>
+<h3>5.6 Erros por posição (de 30 placas, com regra)</h3>
+<table>
+<thead>
+<tr>
+<th>Pipeline</th>
+<th>pos1</th>
+<th>pos2</th>
+<th>pos3</th>
+<th>pos4</th>
+<th>pos5</th>
+<th>pos6</th>
+<th>pos7</th>
+<th>Total</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A) clássico</td>
+<td>24</td>
+<td>18</td>
+<td>21</td>
+<td>17</td>
+<td>21</td>
+<td>23</td>
+<td>23</td>
+<td>147</td>
+</tr>
+<tr>
+<td>B) YOLO caixas + CNN</td>
+<td>10</td>
+<td>9</td>
+<td>13</td>
+<td>13</td>
+<td>13</td>
+<td>12</td>
+<td>10</td>
+<td>80</td>
+</tr>
+<tr>
+<td><strong>C) YOLO caixa+classe</strong></td>
+<td><strong>5</strong></td>
+<td>9</td>
+<td>9</td>
+<td>11</td>
+<td>10</td>
+<td>11</td>
+<td><strong>4</strong></td>
+<td><strong>59</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Dois padrões saltam. A queda de A para C é <strong>uniforme</strong> — nenhuma posição resiste, o
+que confirma que o problema era sistêmico. E no pipeline C <strong>as extremidades erram bem
+menos que o miolo</strong> (5 e 4, contra 9 a 11 no centro). Se a falha fosse de <em>localização</em>,
+o padrão seria o oposto — as pontas é que se perderiam no recorte. O padrão observado
+aponta para <strong>confusão de classe</strong> entre caracteres visualmente próximos.</p>
+<h3>5.7 Confronto com as metas</h3>
+<table>
+<thead>
+<tr>
+<th>Meta</th>
+<th>Alvo</th>
+<th>Obtido</th>
+<th>Situação</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mAP@0.5 — detecção da placa</td>
+<td>&gt; 0,90</td>
+<td><strong>0,992</strong></td>
+<td>✅ superada</td>
+</tr>
+<tr>
+<td>mAP@0.5 — detecção de caracteres</td>
+<td>—</td>
+<td><strong>0,9305</strong></td>
+<td>✅ (meta não definida)</td>
+</tr>
+<tr>
+<td>Acurácia por caractere — CNN isolada</td>
+<td>&gt; 0,95</td>
+<td>0,9435</td>
+<td>⚠️ próxima, não atingida</td>
+</tr>
+<tr>
+<td>Acurácia por caractere — fim a fim</td>
+<td>&gt; 0,95</td>
+<td><strong>0,7190</strong></td>
+<td>❌ não atingida</td>
+</tr>
+<tr>
+<td>Acurácia por placa — fim a fim</td>
+<td>&gt; 0,80</td>
+<td><strong>0,3333</strong></td>
+<td>❌ não atingida</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Duas metas não foram atingidas, e isso precisa ser dito sem rodeio:</strong> o sistema lê
+corretamente 10 das 30 placas, distante dos 80% projetados.</p>
+<h2>6. Conclusão</h2>
+<h3>6.1 Por que a acurácia por placa é tão menor que a por caractere</h3>
+<p>Com acurácia por caractere <code>p</code> e erros independentes, a acurácia por placa esperada
+seria <code>p⁷</code>:</p>
+<ul>
+<li>com <code>p = 0,7190</code> → <code>p⁷ = 0,099</code>, isto é, ~3 placas em 30;</li>
+<li><strong>o observado é 10 em 30 (0,333)</strong> — mais de três vezes melhor.</li>
+</ul>
+<p>A diferença revela que <strong>os erros não são independentes</strong>: concentram-se em placas
+ruins (baixa resolução, reflexo, ângulo), enquanto as placas boas saem inteiramente
+corretas. O sistema não erra um caractere aqui e outro ali — acerta a placa toda ou
+erra várias posições da mesma placa. Operacionalmente isso é boa notícia: um filtro de
+qualidade de imagem na entrada tende a separar bem os dois regimes.</p>
+<h3>6.2 O que o trabalho mostra</h3>
+<ol>
+<li><strong>Detectar a placa é o problema fácil; localizar os caracteres é o difícil.</strong> A
+   detecção chegou a 0,992 de mAP@0.5 com um modelo leve. A segmentação clássica
+   encontrou os 7 caracteres em menos de um terço das placas.</li>
+<li><strong>O limite era do método, não do ajuste.</strong> Elevar a resolução de 200×62 para 600×186
+   levou o acerto de 4/14 para 8/14 e saturou. Depois da binarização os caracteres se
+   tocam e deixam de existir como componentes separados.</li>
+<li><strong>Trocar a etapa gargalo valeu mais que otimizar as demais.</strong> O experimento
+   controlado — mesma CNN, segmentação diferente — dobrou a acurácia por caractere.
+   Identificar corretamente qual etapa limita o sistema valeu mais que qualquer ajuste
+   de hiperparâmetro.</li>
+<li><strong>Conhecimento de domínio complementa o modelo, mas não o substitui.</strong> A regra de
+   formato rendeu +10 pontos sobre um reconhecimento bom e apenas +2,9 sobre um ruim:
+   corrige erro de <em>confusão</em>, não erro de <em>percepção</em>.</li>
+<li><strong>Um pipeline só pode ser otimizado depois de medido de ponta a ponta.</strong> As métricas
+   por etapa eram boas enquanto o sistema completo lia zero placas.</li>
+</ol>
+<h3>6.3 Limitações</h3>
+<ol>
+<li><strong>As metas de reconhecimento não foram atingidas</strong> — 0,719 por caractere (meta 0,95)
+   e 0,333 por placa (meta 0,80).</li>
+<li><strong>O conjunto de avaliação é pequeno:</strong> 30 placas, cada uma valendo 3,3 pontos
+   percentuais. Insuficiente para distinguir com confiança 0,33 de 0,45.</li>
+<li><strong>O detector de caracteres não completou o treino planejado</strong> — a sessão gratuita do
+   Colab caiu por volta da época 30 de 40. Há margem de melhora não medida.</li>
+<li><strong>A detecção de layout acerta 24 de 30.</strong> Cada erro aplica a máscara errada e
+   corrompe a correção justamente onde ela deveria ajudar.</li>
+<li><strong>Perspectiva não é corrigida</strong>, apenas rotação no plano; e <strong>placas de motocicleta,
+   em duas linhas, estão fora do escopo</strong>.</li>
+<li><strong>Condições noturnas não foram avaliadas</strong> — as bases são majoritariamente diurnas.</li>
+<li><strong>O limiar de rejeição (0,70) não foi recalibrado.</strong> Como a confiança mínima
+   observada fica entre 0,059 e 0,759 (mediana 0,344), o sistema marca quase tudo como
+   <code>revisao_manual</code>: conservador e seguro, mas ainda pouco útil.</li>
+</ol>
+<h3>6.4 Trabalhos futuros</h3>
+<p>Concluir o treino do detector de caracteres (maior retorno esperado por esforço);
+ampliar o gabarito para 100–200 placas; retificação por homografia a partir dos 4
+cantos, resolvendo a perspectiva; recalibrar o limiar de rejeição sobre dados de
+gabarito; suporte a placas de motocicleta; disponibilização como serviço (ONNX, API
+REST e containerização, cujo esqueleto já está em <code>api/</code>); e migrar para uma base com
+texto anotado, como o RodoSol-ALPR (20 mil imagens brasileiras transcritas), que
+eliminaria o gabarito manual e permitiria avaliar em escala muito maior.</p>
+<h3>6.5 Considerações de privacidade</h3>
+<p>A placa veicular <strong>identifica indiretamente uma pessoa</strong>. Um sistema capaz de lê-la
+automaticamente, em escala e de forma contínua, pode reconstruir deslocamentos e
+rotinas — o que o aproxima de um instrumento de vigilância, independentemente da
+intenção de quem o constrói.</p>
+<p>Este é um <strong>exercício acadêmico, sem finalidade de vigilância ou rastreamento</strong>. Foram
+usados exclusivamente conjuntos públicos licenciados para pesquisa; nenhuma imagem foi
+coletada pelo autor; as bases e os modelos <strong>não são versionados no repositório</strong>; e o
+sistema produz apenas a string da placa — <strong>não consulta, armazena nem cruza</strong> qualquer
+dado sobre proprietário, veículo ou localização. Um uso real estaria sujeito à <strong>LGPD
+(Lei 13.709/2018)</strong>, exigindo base legal, finalidade específica, política de retenção e
+registro de acessos.</p>
+<p>Cabe um ponto final, técnico e ético ao mesmo tempo: um sistema com <strong>0,333 de acurácia
+por placa não deve ser usado para decisões automáticas sobre pessoas</strong> — uma leitura
+errada vira multa indevida ou bloqueio de acesso a quem não deveria sofrê-lo. O
+mecanismo de recusa implementado (devolver <code>revisao_manual</code> em vez de arriscar um
+palpite) é, antes de ser escolha de engenharia, a postura correta para um sistema cujos
+erros recaem sobre terceiros.</p>
+<h2>Anexo — Reprodutibilidade</h2>
+<p>Treinos em GPU T4 do Google Colab; toda a avaliação e inferência em CPU local (Apple
+M1). Os módulos de <code>src/</code> são cobertos por <strong>28 testes</strong> em <code>pytest</code>, e os notebooks
+importam deles em vez de redefinir funções — o código medido é o código entregue.</p>
+<pre><code class="language-bash">python -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install -r requirements.txt
+pytest tests/ -v                                 # 28 testes das funções puras
+
+python notebooks/07_comparar_pipelines.py        # comparação dos 3 pipelines
+python notebooks/08_varredura_conf_e_erros.py    # limiar e erros por posição
+python notebooks/09_avaliar_yolo_caracteres.py   # mAP do detector de caracteres
+</code></pre>
+<p>Os notebooks <code>01_</code> a <code>06_</code> reproduzem, na ordem, a preparação dos dados, o treino do
+detector, a geração da base de caracteres, o treino da CNN, o pipeline fim a fim e o
+treino do detector de caracteres. Modelos treinados não são versionados por tamanho.</p>
+<p><strong>Tabelas</strong> em <code>resultados/tabelas/</code> (16 arquivos) e <strong>figuras</strong> em
+<code>resultados/figuras/</code> (13 arquivos) — toda métrica citada acima tem origem nesses
+arquivos.</p>
+</body>
+</html>
