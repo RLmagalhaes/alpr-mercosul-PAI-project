@@ -31,3 +31,7 @@ t2/
 # Pasta de entrega — montada por notebooks/11_montar_entrega.py, 41 MB
 # (contem copias dos modelos e das imagens; o script regenera quando preciso)
 entrega/
+
+# Pacote compactado da entrega — montado a partir de entrega/, nao versionar
+# (sao ~38 MB num repositorio cujo conteudo real tem ~12 MB)
+*.zip
