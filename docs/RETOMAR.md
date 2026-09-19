@@ -71,6 +71,11 @@ print(leitor.ler("entrega/imagens_exemplo/<alguma>.jpg", modo="yolo"))
 Se `dados/` tiver sumido, os notebooks 01 e 03 rebaixam tudo do Roboflow — mas
 é preciso uma chave nova (ver §5).
 
+> **Por que o clone baixa ~50 MB se o repositório tem 12 MB:** um zip de 38 MB da
+> entrega entrou por engano no commit `541efca` e foi removido no commit seguinte.
+> O blob continua no histórico — decisão consciente de não reescrever o histórico
+> publicado. Não afeta o conteúdo, só o tamanho do clone.
+
 ---
 
 ## 3. O mapa do código

@@ -453,7 +453,72 @@ pausa organizada, para ser retomado meses depois sem redescobrir nada.
 - Gabarito de 30 placas é pequeno; cada placa vale 3,3 pontos.
 - `api/` escrito mas não executado, e ligado ao pipeline clássico.
 
-**Próximo passo:** projeto em pausa. Ao retomar, ler `docs/RETOMAR.md` §7.
+### Varredura de redundâncias — última sessão do projeto
+
+Depois da entrega, uma varredura no repositório inteiro: 82 arquivos, 15 MB
+versionados. Procurava redundância, arquivo sem uso e código morto.
+
+**O achado que mais surpreendeu:** 85% do repositório versionado eram PNGs que
+**não aparecem em lugar nenhum**. O `RELATORIO.pdf` entregue tem zero figuras —
+são 12 páginas de texto e tabelas, confirmado contando `![...]` no Markdown e
+`<img>` no HTML. As 13 figuras de `resultados/figuras/` (9,5 MB) existem como
+trilha de evidência, citadas coletivamente no Anexo, mas nunca exibidas.
+
+**Aplicado** (o que não tinha argumento contra):
+
+- `LIMIAR_CONFIANCA` estava definido **duas vezes**, em `pipeline.py` e em
+  `leitor_yolo.py`. Unificado em `validacao.py` — escolhido por ser o único
+  módulo que os dois já importavam, então nenhum leitor passou a depender do
+  outro. Verificado que as duas rotas leem da mesma linha.
+- `requirements.txt`: `onnxruntime` e `tf2onnx` removidos (ONNX foi cortado do
+  escopo no Dia 6 e nada no repositório os importa). **`markdown` adicionado** —
+  `10_gerar_html_relatorio.py` o importa e ele não estava declarado; quem
+  clonasse o repositório recebia `ModuleNotFoundError` ao gerar o relatório.
+- `docs/figuras_exploratorias/` apagada: 3,3 MB de PNGs criados neste mesmo dia
+  e não citados em lugar nenhum.
+- Os 3 `.gitkeep` de pastas que hoje têm arquivos reais, e `runs/` (vazia).
+- **Dois números errados corrigidos:** o Anexo do relatório dizia "16 arquivos"
+  em `resultados/tabelas/` quando são 22; e o README mandava buscar os modelos em
+  `entrega/modelos/`, pasta que quem clona o repositório nunca vai ter.
+
+Depois do refactor: 28 testes passam e uma leitura de ponta a ponta foi
+executada para confirmar que a unificação da constante não quebrou nada.
+
+**Não aplicado — 7 decisões com argumento dos dois lados**, documentadas em
+`docs/RETOMAR.md` §8 e resumidas em `CLAUDE.md` para a próxima sessão: o destino
+do `api/` (escrito, nunca executado, e ligado ao pipeline errado), as 9,5 MB de
+figuras, a renumeração dos notebooks (há quatro `06_`, um `05b` e dois sem
+número), o notebook da entrega que só existe como strings dentro do script 11
+(372 de 626 linhas), as 33 linhas duplicadas entre `pipeline.py` e
+`leitor_yolo.py`, os HTML gerados que estão versionados, e o backup inexistente
+dos modelos.
+
+**A decisão que continua valendo:** as ~22 linhas que geram a versão do relatório
+sem as seções 6.4 e 6.5 **ficam**. Sem elas, uma reimpressão futura devolveria as
+duas seções ao PDF da professora sem ninguém perceber.
+
+### ERRO DESTA SESSÃO: 38 MB de zip empurrados para o GitHub
+
+Um `git add -A` do agente varreu o `Entrega Final.zip` (38 MB), que o Raphael
+tinha acabado de criar para enviar à professora, para dentro do commit `541efca`
+— e foi empurrado para o GitHub. O agente não conferiu os arquivos novos antes de
+commitar.
+
+Corrigido no commit seguinte: o zip saiu do versionamento, `*.zip` entrou no
+`.gitignore` e o arquivo continua intacto no disco. O topo do repositório voltou
+a 75 arquivos e 11,8 MB.
+
+**O blob continua no histórico, de propósito.** Reescrever o commit e dar
+force-push foi oferecido e **recusado pelo Raphael**. Consequência a saber:
+**quem clonar o repositório baixa ~50 MB em vez de 12 MB**, porque o Git traz o
+histórico inteiro. Não afeta o conteúdo, só o tamanho do clone.
+
+**Lição, para a próxima:** `git add -A` num repositório onde entram artefatos
+grandes gerados fora do controle do agente. O certo é conferir `git status`
+antes de qualquer `add -A`, ou versionar por caminho explícito.
+
+**Próximo passo:** **projeto encerrado.** Ao retomar, ler `docs/RETOMAR.md` — §7
+para voltar a rodar, §8 para as decisões de limpeza que ficaram em aberto.
 
 ---
 
