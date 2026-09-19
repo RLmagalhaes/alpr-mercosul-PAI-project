@@ -18,9 +18,7 @@ import numpy as np
 from .preprocessamento import (CORTE_POR_LAYOUT, CORTE_SUPERIOR,
                                detectar_layout, endireitar, preparar,
                                recortar, segmentar)
-from .validacao import CLASSES, aplicar_mascara
-
-LIMIAR_CONFIANCA = 0.70     # abaixo disto o sistema pede revisão humana
+from .validacao import CLASSES, LIMIAR_CONFIANCA, aplicar_mascara
 
 
 class LeitorDePlacas:

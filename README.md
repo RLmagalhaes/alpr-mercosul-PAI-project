@@ -62,9 +62,10 @@ Inferência e avaliação rodam em **CPU local**, em segundos. Só o treino prec
 de GPU (T4 do Google Colab).
 
 Os modelos treinados (`.pt`, `.keras`) e os datasets **não estão versionados**,
-por tamanho — ver `.gitignore`. Os três modelos usados pelo sistema estão na
-pasta da entrega (`entrega/modelos/`, 29 MB), montada por
-`notebooks/11_montar_entrega.py`.
+por tamanho — ver `.gitignore`. Os três modelos usados pelo sistema somam 29 MB e
+hoje existem apenas na máquina do autor; sem eles, os notebooks 01, 04 e 06
+refazem o treino do zero. Os datasets são rebaixáveis do Roboflow pelos notebooks
+01 e 03 (requer chave própria, ver abaixo).
 
 ### Chave do Roboflow
 

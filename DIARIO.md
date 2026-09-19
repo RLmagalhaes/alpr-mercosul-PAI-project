@@ -428,9 +428,9 @@ pausa organizada, para ser retomado meses depois sem redescobrir nada.
 6. **Limpeza.** Removidas `_to_delete/` (1,2 MB de locks do git), `_preview/`
    (5,8 MB) e `t2/` (8,3 MB, trabalho de outra aluna). Antes de apagar, os 3 PNGs
    de `_preview/` que não tinham cópia idêntica em `resultados/figuras/` foram
-   movidos para `docs/figuras_exploratorias/`, com um LEIA-ME explicando o que
-   são — ficam fora de `resultados/figuras/` para não invalidar a contagem de
-   13 figuras citada no relatório.
+   movidos para `docs/figuras_exploratorias/`. **Removidos depois, na varredura
+   do mesmo dia** (ver abaixo): não eram citados em lugar nenhum e pesavam
+   3,3 MB num repositório de 15 MB.
 
 **Entregues**
 - [x] `RELATORIO.pdf` — 12 páginas, em `entrega/RELATORIO.pdf`

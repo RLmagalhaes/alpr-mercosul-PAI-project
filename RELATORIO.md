@@ -430,6 +430,6 @@ Os notebooks `01_` a `06_` reproduzem, na ordem, a preparação dos dados, o tre
 detector, a geração da base de caracteres, o treino da CNN, o pipeline fim a fim e o
 treino do detector de caracteres. Modelos treinados não são versionados por tamanho.
 
-**Tabelas** em `resultados/tabelas/` (16 arquivos) e **figuras** em
+**Tabelas** em `resultados/tabelas/` (22 arquivos) e **figuras** em
 `resultados/figuras/` (13 arquivos) — toda métrica citada acima tem origem nesses
 arquivos.

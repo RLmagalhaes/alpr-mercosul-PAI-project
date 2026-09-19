@@ -155,4 +155,36 @@ alpr-mercosul/
 
 ## Estado atual
 
-Consulte sempre o `DIARIO.md`. É lá que fica o registro do que já foi feito e das métricas obtidas.
+**O trabalho foi entregue à professora no Dia 7 e o projeto está em pausa.**
+A pasta `entrega/` está fechada e conferida; o repositório está limpo e público.
+
+Ao iniciar uma sessão nova, leia nesta ordem:
+
+1. **`docs/RETOMAR.md`** — é o ponto de entrada, não o `DIARIO.md`. Tem o estado
+   em uma página, como voltar a rodar em 5 minutos, o mapa do código, as
+   armadilhas conhecidas e as pendências ordenadas por retorno/esforço.
+2. `DIARIO.md` — só se precisar do detalhe de um dia específico. São 47 KB.
+
+### ⚠️ Pendente para a próxima sessão: retomar a análise de limpeza
+
+No fim do Dia 7 foi feita uma varredura de redundâncias no repositório. **O que
+era consensual já foi aplicado** (dependências mortas do ONNX removidas,
+`markdown` declarado, `LIMIAR_CONFIANCA` unificado em `validacao.py`, `.gitkeep`
+e `runs/` removidos, `docs/figuras_exploratorias/` apagada, e dois números
+errados corrigidos no relatório e no README).
+
+**Ficaram 7 decisões em aberto, listadas em `docs/RETOMAR.md` §8.** Cada uma tem
+argumento dos dois lados, e por isso são do Raphael, não do agente. Em resumo:
+
+| # | Decisão | Peso |
+| --- | --- | --- |
+| 8.1 | O `api/` fica ou sai? | Decidir primeiro — as outras dependem |
+| 8.2 | 9,5 MB de figuras que o relatório não exibe (63% do repo) | Alto |
+| 8.3 | Renumerar os notebooks (há quatro `06_`, um `05b`, dois sem número) | Médio |
+| 8.4 | O notebook da professora só existe como strings dentro do script 11 | Médio |
+| 8.5 | 33 das 115 linhas de `pipeline.py` duplicadas em `leitor_yolo.py` | Baixo |
+| 8.6 | Os HTML gerados estão versionados | Baixo |
+| 8.7 | **Os modelos treinados só existem neste Mac, sem backup** | Risco real |
+
+**Ao retomar, comece perguntando ao Raphael sobre a 8.7 e a 8.1.** A 8.7 não é
+limpeza, é risco: são 40 épocas de treino que existem num disco só.

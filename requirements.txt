@@ -1,4 +1,4 @@
-# Ambiente local (Mac) — inferência, API e testes. O treino roda no Colab.
+# Ambiente local (Mac) — inferência, relatório e testes. O treino roda no Colab.
 ultralytics==8.3.0
 tensorflow==2.17.0
 opencv-python==4.10.0.84
@@ -10,6 +10,5 @@ scikit-learn==1.5.2
 fastapi==0.115.0
 uvicorn==0.30.6
 python-multipart==0.0.9
-onnxruntime==1.19.2
-tf2onnx==1.16.1
+markdown==3.9          # usado por notebooks/10_gerar_html_relatorio.py
 pytest==8.3.3

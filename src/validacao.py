@@ -10,6 +10,11 @@ permite corrigir boa parte dos erros do classificador sem treinar mais nada —
 
 CLASSES = list("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
+# Abaixo desta confiança mínima o sistema devolve `revisao_manual` em vez de
+# arriscar um palpite. Definido aqui, e não nos leitores, para existir num
+# lugar só: `pipeline.py` e `leitor_yolo.py` importam desta linha.
+LIMIAR_CONFIANCA = 0.70
+
 MASCARAS = {
     "mercosul": "LLLDLDD",
     "antiga":   "LLLDDDD",

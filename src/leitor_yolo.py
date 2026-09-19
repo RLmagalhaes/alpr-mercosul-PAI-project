@@ -32,9 +32,7 @@ import cv2
 import numpy as np
 
 from .preprocessamento import TAMANHO_CARACTERE, detectar_layout, recortar
-from .validacao import CLASSES, aplicar_mascara
-
-LIMIAR_CONFIANCA = 0.70
+from .validacao import CLASSES, LIMIAR_CONFIANCA, aplicar_mascara
 N_CARACTERES = 7
 
 # O dataset de caracteres tem 38 classes: as 36 do alfabeto de placa mais

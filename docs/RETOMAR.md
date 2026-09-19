@@ -251,3 +251,83 @@ em `~/.claude/plans/` (`eu-j-estou-atrasado-*.md` e
    sem trabalho novo de modelagem.
 4. Só depois pense em trocar de base (§4.7) — aí vira outro projeto, maior e
    melhor.
+
+---
+
+## 8. Decisões de limpeza em aberto
+
+Uma varredura de redundâncias foi feita no fim do Dia 7. O que era consensual já
+foi aplicado (ver `DIARIO.md`). **Estes sete itens ficaram para decisão**, porque
+cada um tem argumento dos dois lados. Revisitar na próxima sessão.
+
+### 8.1 O `api/` fica ou sai? — *decidir primeiro, os outros dependem*
+
+79 linhas (`app.py`, `Dockerfile`, `requirements.txt`) escritas, **nunca
+executadas**, e `app.py` instancia `LeitorDePlacas` (acurácia 0,300) em vez de
+`LeitorDePlacasYOLO` (0,719) — está errado, não só parado.
+
+- **Fica:** é a continuação natural do projeto (§4.6) e trocar a classe é uma
+  linha. Nesse caso `fastapi`, `uvicorn` e `python-multipart` seguem no
+  `requirements.txt`.
+- **Sai:** o `requirements.txt` cai de 12 para 9 linhas e o repositório deixa de
+  ter uma pasta que promete algo que não funciona.
+
+### 8.2 As 9,5 MB de figuras que o relatório não exibe
+
+`resultados/figuras/` tem 13 PNGs e **nenhum aparece no relatório** — são zero
+`![...]` no Markdown e zero `<img>` no HTML. O PDF entregue é texto e tabelas.
+
+- **Ficam:** são a trilha de evidência de que cada número saiu de código.
+- **Encolhem:** as 4 maiores somam 7,1 MB (`gabarito_para_rotular` 2,5 MB,
+  `pipeline_exemplos` 1,7 MB, `piores_casos` 1,5 MB, `verificacao_recorte_dia5`
+  1,4 MB) e as duas últimas são diagnóstico interno, não resultado.
+- **Recomprimem:** `dpi=140` em PNG é pesado para o que elas mostram.
+
+Para dimensionar: hoje **63% do repositório versionado são esses 13 arquivos.**
+
+### 8.3 Renumerar os notebooks
+
+A ordem de execução não se lê na lista de arquivos: há **quatro** notebooks
+`06_`, um `05b`, e dois sem número nenhum — sendo que `treinar_detector.py` é o
+treino do Dia 1, o passo mais importante da sequência, e fica solto no fim da
+ordem alfabética. Renumerar de 01 a 14 resolveria; o custo é quebrar os caminhos
+citados no `RELATORIO.md`, no `README.md` e neste arquivo.
+
+### 8.4 O notebook da professora mora dentro de um script
+
+`notebooks/11_montar_entrega.py` tem 626 linhas, das quais **372 (59%) são o
+`ALPR_Mercosul.ipynb` escrito como strings Python**. Como `entrega/` é ignorada
+pelo Git, o notebook entregue não está versionado em lugar nenhum — só a receita
+para gerá-lo. Versionar o `.ipynb` e fazer o script apenas copiá-lo seria mais
+simples de entender, ao custo de manter os dois em sincronia.
+
+### 8.5 A duplicação entre `pipeline.py` e `leitor_yolo.py`
+
+**33 das 115 linhas** de `pipeline.py` são idênticas às de `leitor_yolo.py` — o
+carregamento preguiçoso dos modelos e a leitura da imagem. Uma classe base
+resolveria em ~30 minutos. (A constante `LIMIAR_CONFIANCA`, que estava definida
+duas vezes, já foi unificada em `validacao.py`.)
+
+A duplicação equivalente entre `treinar_detector.py` e
+`06_yolo_caracteres_treinar.py` (o `sync_loop` de checkpoint) **não vale
+corrigir**: esses scripts rodam isolados dentro da VM do Colab, onde `src/` pode
+não existir.
+
+### 8.6 Os HTML gerados estão versionados
+
+`RELATORIO.html` (29 KB) e `RELATORIO_entrega.html` (27 KB) são derivados de
+`RELATORIO.md` e regeneram em 1 segundo. Versionar saída de build normalmente é
+errado. O `RELATORIO_entrega.pdf` (423 KB) é caso diferente: é o artefato que foi
+efetivamente entregue, e vale manter por rastreabilidade.
+
+> As ~22 linhas que geram a versão sem as seções 6.4 e 6.5
+> (`SECOES_FORA_DA_ENTREGA` em `notebooks/10_gerar_html_relatorio.py`)
+> **devem ficar**. Se o relatório for reimpresso sem elas, as duas seções voltam
+> silenciosamente para o PDF da professora.
+
+### 8.7 Risco, não redundância: os modelos só existem num lugar
+
+Os três modelos treinados (29 MB) estão **apenas neste Mac**. Não vão para o
+GitHub, corretamente, por tamanho — mas o README não tem link de backup. Se o
+disco falhar, são 40 épocas de treino perdidas. **Subir para o Drive e colar o
+link no README é a tarefa mais barata e mais valiosa desta lista.**
