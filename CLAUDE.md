@@ -188,3 +188,19 @@ argumento dos dois lados, e por isso são do Raphael, não do agente. Em resumo:
 
 **Ao retomar, comece perguntando ao Raphael sobre a 8.7 e a 8.1.** A 8.7 não é
 limpeza, é risco: são 40 épocas de treino que existem num disco só.
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+As issues ficam no GitHub Issues deste repositório, usando o `gh`. Veja `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Os cinco rótulos padrão, com o mesmo nome dos papéis: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. Veja `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: um `GLOSSARY.md` e um `docs/adr/` na raiz do repositório. Veja `docs/agents/domain.md`.
