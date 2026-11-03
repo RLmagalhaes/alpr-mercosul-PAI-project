@@ -22,6 +22,10 @@ foto → [YOLO detecta a placa] → [recorte com margem de 8%]
 placas. Com tão poucas placas, cada uma vale 3,3 pontos de acurácia, então a medida
 ainda é grosseira.
 
+Esses números são otimistas: as 30 placas foram escolhidas entre as maiores e mais
+legíveis, e não representam condições mais difíceis, como placas menores ou imagens
+noturnas.
+
 As tabelas de origem estão em `resultados/tabelas/`.
 
 ### O que a comparação mostrou: o gargalo era a segmentação
