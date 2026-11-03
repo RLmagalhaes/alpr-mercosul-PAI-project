@@ -1,4 +1,4 @@
-# Dados e modelos ficam no Google Drive — link no README
+# Dados e modelos sao grandes demais para o repositorio
 dados/
 modelos/
 *.pt
@@ -28,8 +28,7 @@ _preview/
 # Trabalho de referencia de outra aluna (material de terceiros, nao entra no repo)
 t2/
 
-# Pasta de entrega — montada por notebooks/11_montar_entrega.py, 41 MB
-# (contem copias dos modelos e das imagens; o script regenera quando preciso)
+# Pasta da entrega, montada pelo script 11 da tag entrega-v1 (41 MB)
 entrega/
 
 # Pacote compactado da entrega — montado a partir de entrega/, nao versionar
