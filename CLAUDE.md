@@ -1,206 +1,57 @@
-# CLAUDE.md — Instruções do projeto
+# ALPR Mercosul
 
-> Este arquivo é lido automaticamente pelo Claude Code em toda sessão.
-> Não é preciso recolar o briefing a cada dia.
+Projeto acadêmico: recebe a foto de um veículo e devolve o texto da placa. O estado,
+os resultados e como rodar estão no `README.md`.
 
----
-
-## O projeto
-
-Sistema **ALPR Mercosul**: recebe a foto de um veículo e devolve o texto da placa.
-
-```
-foto → [YOLO detecta a placa] → [recorte + endireitamento] → [cinza + CLAHE + Otsu]
-     → [segmenta 7 caracteres] → [CNN classifica cada um] → [regra do formato] → "ABC1D23"
-```
-
-Trabalho final de pós-graduação em Processamento e Análise de Imagens.
-**Prazo: 7 dias, 2 a 3 horas por dia.** O plano completo está em `docs/ROTEIRO_ALPR_7_DIAS.md`.
-
-**Metas:** mAP@0.5 > 0,90 na detecção · acurácia por caractere > 0,95 · acurácia por placa (os 7 corretos) > 0,80.
-
----
-
-## Sobre o Raphael
-
-- Primeiro projeto de visão computacional; concluiu um plano de estudos de 30 dias sobre redes neurais, CNNs, transfer learning, YOLO, ViT, CLIP e deploy.
-- **Python intermediário:** lê e valida código com tranquilidade, mas não quer escrever do zero.
-- O objetivo é entregar o projeto **e** entender o que foi feito.
-
----
+Metas: mAP@0.5 > 0,90 na detecção, acurácia por caractere > 0,95, acurácia por placa > 0,80.
 
 ## Como trabalhar
 
-1. **Você escreve todo o código.** Sempre completo, comentado em português, pronto para rodar. Nunca peça para ele escrever ou completar trechos.
+O Raphael tem Python intermediário: lê e valida código, e quer entender o que foi feito.
 
-2. **Antes do código:** 2 a 3 linhas dizendo o que o bloco faz e por quê.
+- Escreva todo o código, comentado em português e pronto para rodar.
+- Antes de um bloco, diga em 2 ou 3 linhas o que ele faz e por quê. Depois, diga qual
+  saída esperar. Ao ver a saída real, explique em linguagem simples e diga se o
+  resultado está bom ou ruim.
+- Peça aprovação por issue e por PR. No meio do trabalho, pare só diante de uma
+  surpresa ou antes de gastar cota de GPU em um treino longo.
+- Trate erros direto: entregue a correção e explique a causa em 2 linhas.
+- Reporte métricas com honestidade, mesmo quando forem ruins, e proponha o que tentar.
+- Quando houver escolha, prefira o que funciona hoje ao que é elegante.
 
-3. **Depois do código:** diga qual saída é esperada, para ele conferir.
+## Sessão
 
-4. **Ao ver a saída real:** explique o que aconteceu em linguagem simples, diga se o resultado está bom ou ruim, e sugira correções quando for o caso.
+- **Início:** leia este arquivo e rode `gh issue list`.
+- **Fim:** faça o commit, atualize as issues e rode `colab stop` se houver sessão aberta.
 
-5. **Pergunte antes de avançar.** Ao fim de cada etapa: *"seguimos para a etapa X ou quer ajustar algo aqui?"*. Espere a resposta.
+## Onde cada coisa fica
 
-6. **Se der erro:** corrija direto, entregando o bloco corrigido inteiro, e explique em 2 linhas qual era o problema. Não faça ele adivinhar.
+- O que falta fazer: GitHub Issues.
+- Por que uma decisão foi tomada: `docs/adr/`.
+- Registros do trabalho entregue: `docs/arquivo/`, consultados só quando a tarefa pedir
+  esse histórico. A versão entregue é a tag `entrega-v1`.
+- Modelos e trabalho com dados de licença restrita: repositório privado
+  `RLmagalhaes/alpr-mercosul-modelos`. Este repositório é público e recebe só resultados
+  de bases públicas.
 
-7. **Seja honesto com métricas.** Se ficou ruim, diga que ficou ruim e proponha o que tentar. Não maquie resultado, não elogie número fraco.
+## Execução
 
-8. **Priorize ter algo funcionando.** Entre elegante e pronto, escolha pronto. Refinamento é bônus.
-
----
-
-## Fluxo de cada sessão
-
-**Ao iniciar** (o Raphael vai dizer "vamos para o Dia N"):
-
-1. Leia `DIARIO.md` para saber onde o projeto parou.
-2. Leia a seção do Dia N em `docs/ROTEIRO_ALPR_7_DIAS.md`.
-3. Diga em 3 linhas: o objetivo do dia e o entregável esperado.
-4. Comece a primeira etapa.
-
-**Ao encerrar** — obrigatório, é isto que dá continuidade ao projeto:
-
-1. Atualize `DIARIO.md` com: o que foi feito, **as métricas obtidas com os números reais**, decisões tomadas, o que ficou pendente e qual o próximo passo.
-2. Faça `git add -A && git commit` com uma mensagem descritiva.
-3. Resuma a sessão em 5 linhas.
-
----
-
-## Ambiente de execução
-
-O treino roda em **GPU do Google Colab**, acessada pela **Colab CLI** — não há GPU local (MacBook Air, Apple Silicon). A CLI foi instalada via `uv tool install google-colab-cli` e vive fora do venv do projeto.
-
-**A referência completa da CLI está em `docs/COLAB_SKILL.md`** (gerada por `colab skill`). Consulte esse arquivo antes de usar qualquer comando que não esteja na lista abaixo.
-
-Comandos verificados neste ambiente:
-
-```bash
-colab new                # cria a sessão (provisiona a VM)
-colab sessions           # lista sessões ativas
-colab status             # estado da sessão atual
-colab drivemount         # monta o Google Drive na VM
-colab install ultralytics tensorflow    # instala pacotes na VM
-colab upload arquivo.py  # envia arquivo local para a VM
-colab ls                 # lista arquivos na VM
-colab download modelos/  # traz artefatos de volta para o Mac
-colab log                # histórico da sessão
-colab restart-kernel     # reinicia o kernel sem perder a VM
-colab stop               # encerra a sessão — SEMPRE ao fim do dia
-colab version            # versão da CLI (não existe --version)
-```
-
-**Executar código — duas formas:**
-
-```bash
-echo "print('oi')" | colab exec           # código pela entrada padrão (stdin)
-colab exec -f notebooks/01_dados.ipynb    # arquivo .py ou .ipynb
-colab run script.py                       # roda em VM nova e libera ao terminar
-```
-
-`colab exec` **não aceita código como argumento posicional** — ou vem por stdin, ou por `-f`.
-
-**Regras de uso nesta máquina:**
-
-- Sempre `colab stop` ao encerrar a sessão do dia: runtime parado não consome cota.
-- Antes de um treino longo, `colab status` para confirmar que a VM está viva.
-- Prefira `colab exec -f` com notebooks versionados no repositório, em vez de código solto por stdin — assim o que rodou fica registrado no Git.
-
-**Se a Colab CLI não funcionar na conta gratuita:** o plano B é o Colab no navegador. Nesse caso, entregue cada bloco de código pronto para colar numa célula, e o Raphael cola a saída de volta para você diagnosticar. O fluxo do roteiro já prevê isso.
-
-**Cuidados com o Colab gratuito:**
-- Cota diária de GPU e sessão que cai por inatividade — evite treinos maiores que ~40 minutos seguidos.
-- Salve checkpoints no Drive. Se um treino do YOLO cair, retome com `YOLO('.../weights/last.pt')` e `resume=True`.
-- Antes do treino longo, faça sempre um ensaio de 3 épocas: erros de caminho aparecem em 2 minutos em vez de 40.
-
----
-
-## Estrutura do repositório
-
-```
-alpr-mercosul/
-├── CLAUDE.md              # este arquivo
-├── DIARIO.md              # estado do projeto — atualizar todo dia
-├── README.md
-├── docs/
-│   └── ROTEIRO_ALPR_7_DIAS.md
-├── notebooks/             # 01_ a 06_, numerados na ordem de execução
-├── src/
-│   ├── metricas.py        # iou, acuracia_caractere, acuracia_placa
-│   ├── validacao.py       # regra do formato Mercosul
-│   ├── preprocessamento.py# endireitar, preparar, detectar_layout, segmentar
-│   └── pipeline.py        # LeitorDePlacas.ler()
-├── api/
-│   ├── app.py             # FastAPI /read_plate
-│   ├── requirements.txt
-│   └── Dockerfile
-├── tests/
-│   └── test_basico.py     # roda com pytest, sem dependências pesadas
-└── resultados/
-    ├── figuras/           # PNGs para o relatório
-    └── tabelas/           # CSVs para o relatório
-```
-
----
+- Inferência, avaliação e testes rodam no `.venv` local, em CPU.
+- Treino roda em GPU na nuvem. Antes de usar a Colab CLI, leia `docs/COLAB_SKILL.md`.
+- Antes de treinar ou mexer em dados, leia `docs/armadilhas.md`.
 
 ## Convenções
 
-- **Português** nas explicações, nos comentários e nos nomes de variáveis.
-- Todo número que for para o relatório precisa ter saído de código executado. Nada de valor estimado ou lembrado.
-- Toda figura vai para `resultados/figuras/` em PNG, `dpi=140`, com `bbox_inches='tight'`.
-- Toda tabela vai para `resultados/tabelas/` em CSV.
-- Os módulos em `src/` são a fonte da verdade. Os notebooks importam de lá em vez de redefinir funções.
-- `dados/` e `modelos/` estão no `.gitignore` — arquivos grandes ficam no Drive, com o link no README.
-
----
-
-## Estado atual
-
-**O trabalho foi entregue à professora no Dia 7 e o projeto está em pausa.**
-A pasta `entrega/` está fechada e conferida; o repositório está limpo e público.
-
-Ao iniciar uma sessão nova, leia nesta ordem:
-
-1. **`docs/RETOMAR.md`** — é o ponto de entrada, não o `DIARIO.md`. Tem o estado
-   em uma página, como voltar a rodar em 5 minutos, o mapa do código, as
-   armadilhas conhecidas e as pendências ordenadas por retorno/esforço.
-2. `DIARIO.md` — só se precisar do detalhe de um dia específico. São 47 KB.
-
-### ⚠️ Pendente para a próxima sessão: retomar a análise de limpeza
-
-No fim do Dia 7 foi feita uma varredura de redundâncias no repositório. **O que
-era consensual já foi aplicado** (dependências mortas do ONNX removidas,
-`markdown` declarado, `LIMIAR_CONFIANCA` unificado em `validacao.py`, `.gitkeep`
-e `runs/` removidos, `docs/figuras_exploratorias/` apagada, e dois números
-errados corrigidos no relatório e no README).
-
-**Ficaram 7 decisões em aberto, listadas em `docs/RETOMAR.md` §8.** Cada uma tem
-argumento dos dois lados, e por isso são do Raphael, não do agente. Em resumo:
-
-| # | Decisão | Peso |
-| --- | --- | --- |
-| 8.1 | O `api/` fica ou sai? | Decidir primeiro — as outras dependem |
-| 8.2 | 9,5 MB de figuras que o relatório não exibe (63% do repo) | Alto |
-| 8.3 | Renumerar os notebooks (há quatro `06_`, um `05b`, dois sem número) | Médio |
-| 8.4 | O notebook da professora só existe como strings dentro do script 11 | Médio |
-| 8.5 | 33 das 115 linhas de `pipeline.py` duplicadas em `leitor_yolo.py` | Baixo |
-| 8.6 | Os HTML gerados estão versionados | Baixo |
-| 8.7 | **Os modelos treinados só existem neste Mac, sem backup** | Risco real |
-
-**Ao retomar, comece perguntando ao Raphael sobre a 8.7 e a 8.1.** A 8.7 não é
-limpeza, é risco: são 40 épocas de treino que existem num disco só.
-
----
+- Use português nas explicações, nos comentários e nos nomes de variáveis.
+- Todo número publicado precisa ter saído de código executado.
+- Figuras vão para `resultados/figuras/` em PNG, com `dpi=140` e `bbox_inches='tight'`.
+  Tabelas vão para `resultados/tabelas/` em CSV.
+- `src/` é a fonte da verdade: os scripts importam de lá.
 
 ## Agent skills
 
-### Issue tracker
-
-As issues ficam no GitHub Issues deste repositório, usando o `gh`. Veja `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Os cinco rótulos padrão, com o mesmo nome dos papéis: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. Veja `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: um `GLOSSARY.md` e um `docs/adr/` na raiz do repositório. Veja `docs/agents/domain.md`.
+- **Issue tracker:** GitHub Issues, com `gh`. Veja `docs/agents/issue-tracker.md`.
+- **Triage labels:** `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`,
+  `wontfix`. Veja `docs/agents/triage-labels.md`.
+- **Domain docs:** single-context, com `GLOSSARY.md` e `docs/adr/` na raiz. Veja
+  `docs/agents/domain.md`.
