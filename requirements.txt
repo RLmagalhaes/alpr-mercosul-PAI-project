@@ -7,8 +7,5 @@ pandas==2.2.2
 matplotlib==3.9.2
 seaborn==0.13.2
 scikit-learn==1.5.2
-fastapi==0.115.0
-uvicorn==0.30.6
-python-multipart==0.0.9
 markdown==3.9          # usado por notebooks/10_gerar_html_relatorio.py
 pytest==8.3.3
