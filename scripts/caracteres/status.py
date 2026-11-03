@@ -1,7 +1,7 @@
 """Dia 6 - Mostra o andamento do treino do YOLO de caracteres.
 
 Uso (o Raphael roda no terminal dele):
-    colab exec -s dia6 -f notebooks/06_yolo_caracteres_status.py --timeout 120
+    colab exec -s dia6 -f scripts/caracteres/status.py --timeout 120
 """
 
 import os

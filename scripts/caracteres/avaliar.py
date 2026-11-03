@@ -11,7 +11,7 @@ reescreve um yaml proprio com caminhos absolutos antes de validar - e o mesmo
 cuidado do item 1.3 do roteiro.
 
 Uso:
-    .venv/bin/python notebooks/09_avaliar_yolo_caracteres.py
+    .venv/bin/python scripts/caracteres/avaliar.py
 """
 
 import os
@@ -20,7 +20,7 @@ import sys
 import pandas as pd
 import yaml
 
-RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, RAIZ)
 
 DADOS = f"{RAIZ}/dados/caracteres"

@@ -6,17 +6,15 @@ placas EUROPEIAS -- serve pra medir a segmentacao, nunca o sistema no alvo real
 do projeto. A meta "acuracia por placa > 0,80" no formato Mercosul so pode ser
 medida com um gabarito humano. Sao ~25 placas digitadas a mao, uma vez.
 
-Duas partes:
-  PARTE 1 (este script, modo "gerar") - recorta as placas mais legiveis do
-      split de teste, amplia, e gera uma figura numerada + um CSV com a coluna
-      `texto` vazia pro Raphael preencher.
-  PARTE 2 (modo "medir", depois de preenchido) - roda o LeitorDePlacas de ponta
-      a ponta nessas fotos e calcula acuracia por caractere e por placa.
+Recorta as placas mais legiveis, amplia, e gera uma figura numerada + um CSV
+com a coluna `texto` vazia pra preencher a mao. A medicao fica em
+scripts/leitor/avaliar.py.
+
+ATENCAO: rodar este script SOBRESCREVE o gabarito ja transcrito.
 
 Uso:
-    .venv/bin/python notebooks/06_gabarito_mercosul.py gerar
+    .venv/bin/python scripts/leitor/montar_gabarito.py
     # (preencher a coluna `texto` em resultados/tabelas/gabarito_mercosul.csv)
-    .venv/bin/python notebooks/06_gabarito_mercosul.py medir
 """
 
 import glob
@@ -27,7 +25,7 @@ import cv2
 import numpy as np
 import pandas as pd
 
-RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, RAIZ)
 
 from src.preprocessamento import recortar  # noqa: E402
@@ -45,8 +43,8 @@ CSV = f"{SAIDA_TAB}/gabarito_mercosul.csv"
 # VALID tem 43. Entao o gabarito usa os dois, com a origem registrada no CSV:
 # as de `test` sao held-out puro; as de `valid` foram usadas pra SELECIONAR o
 # best.pt do detector (viés otimista leve na parte de deteccao), mas sao
-# ineditas pro reconhecimento, que e o que este conjunto mede de fato -- a CNN
-# foi treinada noutro dataset (project-swcsj).
+# ineditas pro reconhecimento, que e o que este conjunto mede de fato -- o YOLO
+# de caracteres foi treinado noutro dataset (project-swcsj).
 SPLITS = ["test", "valid"]
 ALTURA_MIN, LARGURA_MIN = 32, 90
 N_CANDIDATAS = 30          # folga sobre as ~25, pra descartar ilegiveis na hora
@@ -139,59 +137,5 @@ def gerar():
     print("sem espaco nem hifen). Linha ilegivel: deixe em branco, que o script pula.")
 
 
-def medir():
-    if not os.path.exists(CSV):
-        print(f"ERRO: {CSV} nao existe. Rode antes: python {sys.argv[0]} gerar")
-        return
-    df = pd.read_csv(CSV, dtype={"texto": str}).fillna({"texto": ""})
-    df["texto"] = df["texto"].str.strip().str.upper()
-    preenchidas = df[df["texto"] != ""]
-    print(f"Linhas com gabarito preenchido: {len(preenchidas)} de {len(df)}")
-    if preenchidas.empty:
-        print("Nada pra medir ainda.")
-        return
-    ruins = preenchidas[preenchidas["texto"].str.len() != 7]
-    if len(ruins):
-        print(f"AVISO: {len(ruins)} linha(s) com tamanho != 7, serao ignoradas:")
-        print(ruins[["n", "arquivo", "texto"]].to_string(index=False))
-        preenchidas = preenchidas[preenchidas["texto"].str.len() == 7]
-
-    from src.metricas import acuracia_caractere, acuracia_placa, erros_por_posicao
-    from src.pipeline import LeitorDePlacas
-
-    cnn = f"{RAIZ}/modelos/cnn_chars_compat.keras"
-    if not os.path.exists(cnn):
-        cnn = f"{RAIZ}/modelos/cnn_chars.keras"
-    leitor = LeitorDePlacas(f"{RAIZ}/modelos/detector_best.pt", cnn)
-
-    linhas = []
-    for _, r in preenchidas.iterrows():
-        res = leitor.ler(f"{BASE}/{r['split']}/images/{r['arquivo']}")
-        linhas.append(dict(
-            split=r["split"], arquivo=r["arquivo"], real=r["texto"],
-            bruto=res.get("placa_sem_regra", "") or "",
-            final=res.get("placa_com_regra", "") or "",
-            layout=res.get("layout", ""), status=res.get("status", ""),
-            conf_minima=res.get("conf_minima", 0.0)))
-    res_df = pd.DataFrame(linhas)
-    res_df.to_csv(f"{SAIDA_TAB}/predicoes_mercosul.csv", index=False)
-
-    reais = res_df["real"].tolist()
-    metricas = []
-    for nome, col in [("CNN sozinha", "bruto"), ("CNN + regra do formato", "final")]:
-        prev = res_df[col].tolist()
-        metricas.append(dict(versao=nome,
-                             acc_caractere=round(acuracia_caractere(reais, prev), 4),
-                             acc_placa=round(acuracia_placa(reais, prev), 4)))
-    m = pd.DataFrame(metricas)
-    m.to_csv(f"{SAIDA_TAB}/metricas_mercosul.csv", index=False)
-    print("\n=== Mercosul, gabarito humano ===")
-    print(m.to_string(index=False))
-    print("\nErros por posicao (1-7):",
-          erros_por_posicao(reais, res_df["final"].tolist()))
-    print(f"\nDetalhe por placa: {SAIDA_TAB}/predicoes_mercosul.csv")
-
-
 if __name__ == "__main__":
-    modo = sys.argv[1] if len(sys.argv) > 1 else "gerar"
-    (gerar if modo == "gerar" else medir)()
+    gerar()

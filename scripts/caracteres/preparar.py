@@ -17,7 +17,7 @@ pesos voltam pro Mac via `colab download`.
 
 Uso (o Raphael roda no terminal dele):
     export ROBOFLOW_API_KEY=...
-    colab exec -s dia6 -f notebooks/06_yolo_caracteres_preparar.py --timeout 900
+    colab exec -s dia6 -f scripts/caracteres/preparar.py --timeout 900
 """
 
 import os

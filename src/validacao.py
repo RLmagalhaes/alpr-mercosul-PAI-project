@@ -11,8 +11,7 @@ permite corrigir boa parte dos erros do classificador sem treinar mais nada —
 CLASSES = list("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 # Abaixo desta confiança mínima o sistema devolve `revisao_manual` em vez de
-# arriscar um palpite. Definido aqui, e não nos leitores, para existir num
-# lugar só: `pipeline.py` e `leitor_yolo.py` importam desta linha.
+# arriscar um palpite.
 LIMIAR_CONFIANCA = 0.70
 
 MASCARAS = {
@@ -20,8 +19,7 @@ MASCARAS = {
     "antiga":   "LLLDDDD",
 }
 
-# Trocas derivadas da matriz de confusão da CNN (Dia 4).
-# Ajuste estes dicionários com os pares que aparecerem no SEU modelo.
+# Trocas por semelhança visual, derivadas dos erros medidos no Dia 4.
 PARA_LETRA = {
     "0": "O", "1": "I", "2": "Z", "4": "A",
     "5": "S", "6": "G", "7": "T", "8": "B",
@@ -71,7 +69,7 @@ def inferir_layout_por_texto(texto: str) -> str:
     """Palpite de layout a partir do próprio texto lido.
 
     Só use como reforço: o método principal é olhar a tarja azul da placa
-    (ver `preprocessamento.detectar_layout`), que não depende do acerto da CNN.
+    (ver `preprocessamento.detectar_layout`), que não depende do acerto do modelo.
     """
     if len(texto) != 7:
         return "mercosul"

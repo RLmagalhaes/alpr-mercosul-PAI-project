@@ -1,37 +1,24 @@
-"""Pipeline alternativo: os caracteres são DETECTADOS por um YOLO, em vez de
-segmentados por processamento clássico de imagem.
+"""Rota final: o YOLO de caracteres dá a caixa E a classe de cada caractere.
 
-Por que existe (ver DIARIO, Dia 6): `segmentar()` acha exatamente 7 blobs em
-apenas 4 de 14 placas (8/14 no melhor caso, com resolução 3x maior). Os
-caracteres se encostam uns nos outros e na moldura da placa depois da
-binarização, então componente conectado não corresponde a caractere. É teto do
-método, não parâmetro mal ajustado. Um detector aprendido não depende de
-binarização, de `corte_superior`, nem de os caracteres estarem separados.
-
-Duas variantes, para o relatório poder comparar:
-
-  modo="yolo"  -> o próprio YOLO de caracteres dá a caixa E a classe.
-                  Pipeline mais curto, dispensa a CNN do Dia 4.
-  modo="cnn"   -> o YOLO dá só as caixas; cada recorte é classificado pela CNN
-                  do Dia 4, com o MESMO tratamento do treino (CLAHE + Otsu
-                  local + 32x32). Mantém a CNN em uso e isola o efeito de
-                  trocar só a segmentação.
+Por que não segmentação clássica: ela acha exatamente 7 blobs em apenas 4 de 14
+placas, porque os caracteres se encostam entre si e na moldura depois da
+binarização. Um detector aprendido não depende de binarização nem de os
+caracteres estarem separados (ver docs/adr/0001-rota-unica-yolo.md).
 
 Uso:
     from src.leitor_yolo import LeitorDePlacasYOLO
 
     leitor = LeitorDePlacasYOLO("modelos/detector_best.pt",
-                                "modelos/chars_best.pt",
-                                "modelos/cnn_chars_compat.keras")
-    print(leitor.ler("foto.jpg", modo="cnn"))
+                                "modelos/chars_best.pt")
+    print(leitor.ler("foto.jpg"))
 """
 
-from typing import List, Tuple, Union
+from typing import Union
 
 import cv2
 import numpy as np
 
-from .preprocessamento import TAMANHO_CARACTERE, detectar_layout, recortar
+from .preprocessamento import detectar_layout, recortar
 from .validacao import CLASSES, LIMIAR_CONFIANCA, aplicar_mascara
 N_CARACTERES = 7
 
@@ -55,13 +42,11 @@ CONF_CARACTERE = 0.05
 
 class LeitorDePlacasYOLO:
     def __init__(self, caminho_detector: str, caminho_chars: str,
-                 caminho_cnn: str = None,
                  limiar_confianca: float = LIMIAR_CONFIANCA):
         self.caminho_detector = caminho_detector
         self.caminho_chars = caminho_chars
-        self.caminho_cnn = caminho_cnn
         self.limiar_confianca = limiar_confianca
-        self._detector = self._chars = self._cnn = None
+        self._detector = self._chars = None
 
     # ---------- carregamento preguiçoso ----------
 
@@ -78,13 +63,6 @@ class LeitorDePlacasYOLO:
             from ultralytics import YOLO
             self._chars = YOLO(self.caminho_chars)
         return self._chars
-
-    @property
-    def cnn(self):
-        if self._cnn is None:
-            from tensorflow import keras
-            self._cnn = keras.models.load_model(self.caminho_cnn)
-        return self._cnn
 
     # ---------- etapas ----------
 
@@ -111,34 +89,11 @@ class LeitorDePlacasYOLO:
         achados.sort(key=lambda t: t[0][0])          # da esquerda pra direita
         return achados
 
-    def _classificar_com_cnn(self, placa_bgr, caixas) -> Tuple[List[str], List[float]]:
-        """Recorta cada caractere e classifica com a CNN do Dia 4, reproduzindo
-        exatamente o tratamento do treino (`04_cnn_caracteres.py`): recorte justo
-        nos dois eixos, CLAHE, Otsu LOCAL, resize 32x32."""
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        fatias = []
-        for (x1, y1, x2, y2) in caixas:
-            rec = placa_bgr[max(0, int(y1)):int(y2), max(0, int(x1)):int(x2)]
-            if rec.size == 0:
-                fatias.append(np.zeros(TAMANHO_CARACTERE, dtype=np.uint8))
-                continue
-            cinza = clahe.apply(cv2.cvtColor(rec, cv2.COLOR_BGR2GRAY))
-            binaria = cv2.threshold(cinza, 0, 255,
-                                    cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
-            fatias.append(cv2.resize(binaria, TAMANHO_CARACTERE,
-                                     interpolation=cv2.INTER_AREA))
-        lote = np.stack(fatias).astype("float32")[..., None]
-        probs = self.cnn.predict(lote, verbose=0)
-        return ([CLASSES[k] for k in probs.argmax(axis=1)],
-                [float(v) for v in probs.max(axis=1)])
-
     # ---------- pipeline ----------
 
     def ler(self, entrada: Union[str, np.ndarray], conf: float = 0.25,
-            conf_char: float = CONF_CARACTERE, modo: str = "cnn",
+            conf_char: float = CONF_CARACTERE,
             usar_mascara: bool = True) -> dict:
-        """`modo`: "yolo" usa a classe do próprio detector de caracteres;
-        "cnn" usa só as caixas dele e classifica com a CNN do Dia 4."""
         img = cv2.imread(entrada) if isinstance(entrada, str) else entrada
         if img is None:
             return {"status": "erro", "motivo": "imagem não pôde ser lida"}
@@ -165,13 +120,9 @@ class LeitorDePlacasYOLO:
             return {"status": "sem_caracteres", "layout": layout,
                     "bbox": [int(x1), int(y1), int(x2), int(y2)]}
 
-        # 4) classificar
-        if modo == "cnn" and self.caminho_cnn:
-            letras, confs = self._classificar_com_cnn(
-                placa, [c[0] for c in achados])
-        else:
-            letras = [c[1] for c in achados]
-            confs = [c[2] for c in achados]
+        # 4) a classe e a confiança vêm do próprio detector de caracteres
+        letras = [c[1] for c in achados]
+        confs = [c[2] for c in achados]
 
         bruto = "".join(letras)
         # 5) regra do formato -- só faz sentido com os 7 caracteres presentes
@@ -189,7 +140,6 @@ class LeitorDePlacasYOLO:
             "n_caracteres": len(bruto),
             "layout": layout,
             "score_azul": score_azul,
-            "modo": modo,
             "conf_deteccao": round(float(confiancas[i]), 3),
             "conf_media": round(float(np.mean(confs)), 3) if confs else 0.0,
             "conf_minima": round(conf_minima, 3),

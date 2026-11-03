@@ -1,6 +1,6 @@
 # ============================================================
 # Dia 1 - Ambiente, dados e detector treinado
-# Roda no Colab via `colab exec -s dia1 -f notebooks/01_dados_e_detector.py`
+# Roda no Colab via `colab exec -s dia1 -f scripts/deteccao/preparar_dados.py`
 # IMPORTANTE: rode `colab drivemount -s dia1` (no seu terminal, interativo)
 # ANTES deste script — o Drive precisa estar montado em /content/drive.
 #

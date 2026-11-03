@@ -8,7 +8,7 @@ E teto do metodo, nao parametro mal ajustado. Este YOLO substitui segmentar().
 
 Roda o treino em SUBPROCESSO em background e devolve o controle na hora, pra
 `colab exec` nao estourar timeout (mesma estrategia do Dia 1). Progresso em
-/content/log_chars.txt; acompanhe com 06_yolo_caracteres_status.py.
+/content/log_chars.txt; acompanhe com scripts/caracteres/status.py.
 
 Resiliencia a queda de sessao (o Colab gratuito caiu varias vezes no Dia 1):
 - save_period=1 salva last.pt a cada epoca
@@ -16,7 +16,7 @@ Resiliencia a queda de sessao (o Colab gratuito caiu varias vezes no Dia 1):
 - ao reiniciar, se achar checkpoint no Drive, retoma com resume=True
 
 Uso:
-    colab exec -s dia6 -f notebooks/06_yolo_caracteres_treinar.py --timeout 120
+    colab exec -s dia6 -f scripts/caracteres/treinar.py --timeout 120
 """
 
 import subprocess
@@ -86,4 +86,4 @@ subprocess.Popen([sys.executable, "/content/treinar_chars.py"],
 
 print("Treino disparado em background.")
 print(f"Epocas: {EPOCAS}. Log em /content/log_chars.txt")
-print("Acompanhe: colab exec -s dia6 -f notebooks/06_yolo_caracteres_status.py")
+print("Acompanhe: colab exec -s dia6 -f scripts/caracteres/status.py")
