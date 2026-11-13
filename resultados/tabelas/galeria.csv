@@ -1,0 +1,9 @@
+n,real,sem_regra,com_regra,n_caracteres,layout,conf_minima,status,motivo
+2,RHA0A01,RHA0A01,RHA0A01,7,mercosul,0.589,revisao_manual,"Mercosul de frente, a leitura mais limpa do conjunto."
+7,FPW4I75,FPW4175,FPW4I75,7,mercosul,0.747,ok,Mercosul em ângulo; uma das placas que o sistema libera sem revisão.
+3,OOV0D55,00VDD55,OOV0D55,7,mercosul,0.326,revisao_manual,"Carro inteiro, placa pequena; a regra resolve O e 0."
+20,JSM2587,JSM2587,JSM2587,7,antiga,0.759,ok,"Formato antigo, de perto; também liberada sem revisão."
+24,NZW7017,NZW7DI7,NZW7017,7,antiga,0.168,revisao_manual,Formato antigo; a regra corrige um D lido no lugar de 0.
+28,EXX1620,EXXIG20,EXX1620,7,antiga,0.211,revisao_manual,Formato antigo; a regra corrige um I lido no lugar de 1.
+4,NZW2197,NZW2IS7,NZW2157,7,antiga,0.587,revisao_manual,"Erro típico: um único caractere trocado, 9 lido como 5."
+22,JRV2727,1,1,1,antiga,0.113,revisao_manual,Placa escura e borrada: o sistema acha só um caractere e pede revisão.

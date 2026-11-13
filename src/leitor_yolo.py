@@ -144,4 +144,9 @@ class LeitorDePlacasYOLO:
             "conf_media": round(float(np.mean(confs)), 3) if confs else 0.0,
             "conf_minima": round(conf_minima, 3),
             "bbox": [int(x1), int(y1), int(x2), int(y2)],
+            # caixas dos caracteres em coordenadas do recorte (com a margem
+            # de 8%), da esquerda pra direita -- usadas para desenhar a galeria
+            "caracteres": [{"classe": c[1], "conf": round(c[2], 3),
+                            "caixa": [round(float(v), 1) for v in c[0]]}
+                           for c in achados],
         }

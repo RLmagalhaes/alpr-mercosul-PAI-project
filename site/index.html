@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Leitura de placas Mercosul com visão computacional · Raphael Magalhães</title>
+  <meta name="description" content="Estudo de caso: um sistema que encontra a placa na foto de um veículo e lê os sete caracteres. Método, resultados e limites.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+<header class="topo">
+  <div class="topo__texto">
+    <p class="assinatura">Estudo de caso · Raphael Magalhães</p>
+    <h1>Da foto do carro ao texto da placa</h1>
+    <p class="abertura">Um sistema de visão computacional que encontra a placa na foto de
+      um veículo e lê os sete caracteres. Esta página conta como ele foi construído, o
+      que já funciona bem e o que ainda falha.</p>
+    <p class="fato">Nas 257 fotos de teste, o detector encontra
+      <strong>98% das placas</strong>, e 98% do que ele marca é
+      de fato uma placa (mAP@0,5 de 0,992).</p>
+  </div>
+  <figure class="topo__demo">
+    <img src="img/galeria/7_foto.jpg"
+         alt="Carro fotografado em ângulo, com a placa marcada por um retângulo azul">
+    <figcaption>
+      <div class="placa placa--mercosul placa--grande" role="img"
+     aria-label="Placa lida: FPW4I75"><span class="placa__faixa" aria-hidden="true">BRASIL</span>
+  <span class="placa__texto" aria-hidden="true"><span class="placa__casa">F</span><span class="placa__casa">P</span><span class="placa__casa">W</span><span class="placa__casa">4</span><span class="placa__casa">I</span><span class="placa__casa">7</span><span class="placa__casa">5</span></span>
+</div>
+      <span class="legenda">Leitura feita pelo sistema nesta foto.</span>
+    </figcaption>
+  </figure>
+</header>
+
+<main>
+
+<section class="secao" aria-labelledby="como">
+  <h2 id="como">Como funciona</h2>
+  <p class="secao__intro">A leitura acontece em quatro etapas. Cada uma resolve um
+    problema menor e passa o resultado adiante.</p>
+  <ol class="etapas">
+    <li class="etapa">
+      <img src="img/galeria/2_foto.jpg" loading="lazy"
+           alt="Frente de um carro com a placa marcada por um retângulo azul">
+      <h3>Achar a placa</h3>
+      <p>Um detector YOLO, treinado em 12.780 fotos de veículos brasileiros,
+        marca onde está a placa.</p>
+    </li>
+    <li class="etapa">
+      <img src="img/galeria/2_recorte.png" loading="lazy"
+           alt="Recorte da placa com um retângulo azul em volta de cada caractere">
+      <h3>Recortar e achar os caracteres</h3>
+      <p>A placa é recortada com 8% de folga, e um segundo YOLO localiza cada caractere
+        e já diz qual é (mAP@0,5 de 0,930 em 36
+        imagens de teste).</p>
+    </li>
+    <li class="etapa">
+      <div class="etapa__mascara" aria-hidden="true">
+        <span>L</span><span>L</span><span>L</span><span>D</span><span>L</span><span>D</span><span>D</span>
+      </div>
+      <h3>Aplicar a regra do formato</h3>
+      <p>Na placa Mercosul, cada posição só aceita letra (L) ou dígito (D). Um 0 lido
+        onde deveria haver letra vira O, e um I onde deveria haver número vira 1.</p>
+    </li>
+    <li class="etapa">
+      <div class="placa placa--mercosul " role="img"
+     aria-label="Placa lida: RHA0A01"><span class="placa__faixa" aria-hidden="true">BRASIL</span>
+  <span class="placa__texto" aria-hidden="true"><span class="placa__casa">R</span><span class="placa__casa">H</span><span class="placa__casa">A</span><span class="placa__casa">0</span><span class="placa__casa">A</span><span class="placa__casa">0</span><span class="placa__casa">1</span></span>
+</div>
+      <h3>Devolver o texto, ou pedir revisão</h3>
+      <p>Se faltar caractere ou a confiança for baixa, o sistema não arrisca: devolve
+        <em>revisão manual</em>.</p>
+    </li>
+  </ol>
+</section>
+
+<section class="secao" aria-labelledby="galeria">
+  <h2 id="galeria">Exemplos</h2>
+  <p class="secao__intro">6 acertos e 2 erros,
+    escolhidos para ilustrar. Os números completos, das 30 placas
+    avaliadas, estão nas seções seguintes.</p>
+  <div class="galeria">
+    <article class="exemplo">
+      <img class="exemplo__foto" src="img/galeria/2_foto.jpg" loading="lazy"
+           alt="Veículo com a placa marcada pelo sistema">
+      <img class="exemplo__recorte" src="img/galeria/2_recorte.png" loading="lazy"
+           alt="Recorte da placa com os caracteres encontrados">
+      <div class="exemplo__leitura">
+        <div class="placa placa--mercosul " role="img"
+     aria-label="Placa lida: RHA0A01"><span class="placa__faixa" aria-hidden="true">BRASIL</span>
+  <span class="placa__texto" aria-hidden="true"><span class="placa__casa">R</span><span class="placa__casa">H</span><span class="placa__casa">A</span><span class="placa__casa">0</span><span class="placa__casa">A</span><span class="placa__casa">0</span><span class="placa__casa">1</span></span>
+</div>
+        <p class="veredito"><span class="veredito__icone" aria-hidden="true">✓</span> Leitura correta</p>
+      </div>
+      <p class="exemplo__motivo">Mercosul de frente, a leitura mais limpa do conjunto.</p>
+      <dl class="exemplo__dados">
+        <div><dt>Caracteres achados</dt><dd>7 de 7</dd></div>
+        <div><dt>Menor confiança</dt><dd>0,59</dd></div>
+        <div><dt>Saída</dt><dd>revisão manual</dd></div>
+      </dl>
+    </article>
+    <article class="exemplo">
+      <img class="exemplo__foto" src="img/galeria/7_foto.jpg" loading="lazy"
+           alt="Veículo com a placa marcada pelo sistema">
+      <img class="exemplo__recorte" src="img/galeria/7_recorte.png" loading="lazy"
+           alt="Recorte da placa com os caracteres encontrados">
+      <div class="exemplo__leitura">
+        <div class="placa placa--mercosul " role="img"
+     aria-label="Placa lida: FPW4I75"><span class="placa__faixa" aria-hidden="true">BRASIL</span>
+  <span class="placa__texto" aria-hidden="true"><span class="placa__casa">F</span><span class="placa__casa">P</span><span class="placa__casa">W</span><span class="placa__casa">4</span><span class="placa__casa">I</span><span class="placa__casa">7</span><span class="placa__casa">5</span></span>
+</div>
+        <p class="veredito"><span class="veredito__icone" aria-hidden="true">✓</span> Leitura correta</p>
+      </div>
+      <p class="exemplo__motivo">Mercosul em ângulo; uma das placas que o sistema libera sem revisão.</p>
+      <dl class="exemplo__dados">
+        <div><dt>Antes da regra</dt><dd class="cod">FPW4175</dd></div>
+        <div><dt>Caracteres achados</dt><dd>7 de 7</dd></div>
+        <div><dt>Menor confiança</dt><dd>0,75</dd></div>
+        <div><dt>Saída</dt><dd>liberada</dd></div>
+      </dl>
+    </article>
+    <article class="exemplo">
+      <img class="exemplo__foto" src="img/galeria/3_foto.jpg" loading="lazy"
+           alt="Veículo com a placa marcada pelo sistema">
+      <img class="exemplo__recorte" src="img/galeria/3_recorte.png" loading="lazy"
+           alt="Recorte da placa com os caracteres encontrados">
+      <div class="exemplo__leitura">
+        <div class="placa placa--mercosul " role="img"
+     aria-label="Placa lida: OOV0D55"><span class="placa__faixa" aria-hidden="true">BRASIL</span>
+  <span class="placa__texto" aria-hidden="true"><span class="placa__casa">O</span><span class="placa__casa">O</span><span class="placa__casa">V</span><span class="placa__casa">0</span><span class="placa__casa">D</span><span class="placa__casa">5</span><span class="placa__casa">5</span></span>
+</div>
+        <p class="veredito"><span class="veredito__icone" aria-hidden="true">✓</span> Leitura correta</p>
+      </div>
+      <p class="exemplo__motivo">Carro inteiro, placa pequena; a regra resolve O e 0.</p>
+      <dl class="exemplo__dados">
+        <div><dt>Antes da regra</dt><dd class="cod">00VDD55</dd></div>
+        <div><dt>Caracteres achados</dt><dd>7 de 7</dd></div>
+        <div><dt>Menor confiança</dt><dd>0,33</dd></div>
+        <div><dt>Saída</dt><dd>revisão manual</dd></div>
+      </dl>
+    </article>
+    <article class="exemplo">
+      <img class="exemplo__foto" src="img/galeria/20_foto.jpg" loading="lazy"
+           alt="Veículo com a placa marcada pelo sistema">
+      <img class="exemplo__recorte" src="img/galeria/20_recorte.png" loading="lazy"
+           alt="Recorte da placa com os caracteres encontrados">
+      <div class="exemplo__leitura">
+        <div class="placa placa--antiga " role="img"
+     aria-label="Placa lida: JSM2587">
+  <span class="placa__texto" aria-hidden="true"><span class="placa__casa">J</span><span class="placa__casa">S</span><span class="placa__casa">M</span><span class="placa__hifen">-</span><span class="placa__casa">2</span><span class="placa__casa">5</span><span class="placa__casa">8</span><span class="placa__casa">7</span></span>
+</div>
+        <p class="veredito"><span class="veredito__icone" aria-hidden="true">✓</span> Leitura correta</p>
+      </div>
+      <p class="exemplo__motivo">Formato antigo, de perto; também liberada sem revisão.</p>
+      <dl class="exemplo__dados">
+        <div><dt>Caracteres achados</dt><dd>7 de 7</dd></div>
+        <div><dt>Menor confiança</dt><dd>0,76</dd></div>
+        <div><dt>Saída</dt><dd>liberada</dd></div>
+      </dl>
+    </article>
+    <article class="exemplo">
+      <img class="exemplo__foto" src="img/galeria/24_foto.jpg" loading="lazy"
+           alt="Veículo com a placa marcada pelo sistema">
+      <img class="exemplo__recorte" src="img/galeria/24_recorte.png" loading="lazy"
+           alt="Recorte da placa com os caracteres encontrados">
+      <div class="exemplo__leitura">
+        <div class="placa placa--antiga " role="img"
+     aria-label="Placa lida: NZW7017">
+  <span class="placa__texto" aria-hidden="true"><span class="placa__casa">N</span><span class="placa__casa">Z</span><span class="placa__casa">W</span><span class="placa__hifen">-</span><span class="placa__casa">7</span><span class="placa__casa">0</span><span class="placa__casa">1</span><span class="placa__casa">7</span></span>
+</div>
+        <p class="veredito"><span class="veredito__icone" aria-hidden="true">✓</span> Leitura correta</p>
+      </div>
+      <p class="exemplo__motivo">Formato antigo; a regra corrige um D lido no lugar de 0.</p>
+      <dl class="exemplo__dados">
+        <div><dt>Antes da regra</dt><dd class="cod">NZW7DI7</dd></div>
+        <div><dt>Caracteres achados</dt><dd>7 de 7</dd></div>
+        <div><dt>Menor confiança</dt><dd>0,17</dd></div>
+        <div><dt>Saída</dt><dd>revisão manual</dd></div>
+      </dl>
+    </article>
+    <article class="exemplo">
+      <img class="exemplo__foto" src="img/galeria/28_foto.jpg" loading="lazy"
+           alt="Veículo com a placa marcada pelo sistema">
+      <img class="exemplo__recorte" src="img/galeria/28_recorte.png" loading="lazy"
+           alt="Recorte da placa com os caracteres encontrados">
+      <div class="exemplo__leitura">
+        <div class="placa placa--antiga " role="img"
+     aria-label="Placa lida: EXX1620">
+  <span class="placa__texto" aria-hidden="true"><span class="placa__casa">E</span><span class="placa__casa">X</span><span class="placa__casa">X</span><span class="placa__hifen">-</span><span class="placa__casa">1</span><span class="placa__casa">6</span><span class="placa__casa">2</span><span class="placa__casa">0</span></span>
+</div>
+        <p class="veredito"><span class="veredito__icone" aria-hidden="true">✓</span> Leitura correta</p>
+      </div>
+      <p class="exemplo__motivo">Formato antigo; a regra corrige um I lido no lugar de 1.</p>
+      <dl class="exemplo__dados">
+        <div><dt>Antes da regra</dt><dd class="cod">EXXIG20</dd></div>
+        <div><dt>Caracteres achados</dt><dd>7 de 7</dd></div>
+        <div><dt>Menor confiança</dt><dd>0,21</dd></div>
+        <div><dt>Saída</dt><dd>revisão manual</dd></div>
+      </dl>
+    </article>
+    <article class="exemplo exemplo--erro">
+      <img class="exemplo__foto" src="img/galeria/4_foto.jpg" loading="lazy"
+           alt="Veículo com a placa marcada pelo sistema">
+      <img class="exemplo__recorte" src="img/galeria/4_recorte.png" loading="lazy"
+           alt="Recorte da placa com os caracteres encontrados">
+      <div class="exemplo__leitura">
+        <div class="placa placa--antiga " role="img"
+     aria-label="Placa lida: NZW2157">
+  <span class="placa__texto" aria-hidden="true"><span class="placa__casa">N</span><span class="placa__casa">Z</span><span class="placa__casa">W</span><span class="placa__hifen">-</span><span class="placa__casa">2</span><span class="placa__casa">1</span><span class="placa__casa placa__casa--errada">5</span><span class="placa__casa">7</span></span>
+</div>
+        <p class="veredito"><span class="veredito__icone" aria-hidden="true">✕</span> Leitura errada; o certo é <span class="cod">NZW2197</span></p>
+      </div>
+      <p class="exemplo__motivo">Erro típico: um único caractere trocado, 9 lido como 5.</p>
+      <dl class="exemplo__dados">
+        <div><dt>Caracteres achados</dt><dd>7 de 7</dd></div>
+        <div><dt>Menor confiança</dt><dd>0,59</dd></div>
+        <div><dt>Saída</dt><dd>revisão manual</dd></div>
+      </dl>
+    </article>
+    <article class="exemplo exemplo--erro">
+      <img class="exemplo__foto" src="img/galeria/22_foto.jpg" loading="lazy"
+           alt="Veículo com a placa marcada pelo sistema">
+      <img class="exemplo__recorte" src="img/galeria/22_recorte.png" loading="lazy"
+           alt="Recorte da placa com os caracteres encontrados">
+      <div class="exemplo__leitura">
+        <div class="placa placa--antiga " role="img"
+     aria-label="Placa lida: 1">
+  <span class="placa__texto" aria-hidden="true"><span class="placa__casa placa__casa--errada">1</span><span class="placa__casa placa__casa--errada placa__casa--vazia">·</span><span class="placa__casa placa__casa--errada placa__casa--vazia">·</span><span class="placa__hifen">-</span><span class="placa__casa placa__casa--errada placa__casa--vazia">·</span><span class="placa__casa placa__casa--errada placa__casa--vazia">·</span><span class="placa__casa placa__casa--errada placa__casa--vazia">·</span><span class="placa__casa placa__casa--errada placa__casa--vazia">·</span></span>
+</div>
+        <p class="veredito"><span class="veredito__icone" aria-hidden="true">✕</span> Leitura errada; o certo é <span class="cod">JRV2727</span></p>
+      </div>
+      <p class="exemplo__motivo">Placa escura e borrada: o sistema acha só um caractere e pede revisão.</p>
+      <dl class="exemplo__dados">
+        <div><dt>Caracteres achados</dt><dd>1 de 7</dd></div>
+        <div><dt>Menor confiança</dt><dd>0,11</dd></div>
+        <div><dt>Saída</dt><dd>revisão manual</dd></div>
+      </dl>
+    </article>
+  </div>
+</section>
+
+<section class="secao" aria-labelledby="virada">
+  <h2 id="virada">O gargalo era a segmentação</h2>
+  <div class="texto">
+    <p>A primeira versão seguia o caminho clássico: binarizar a placa, separar os
+      caracteres como manchas e classificar cada uma com uma rede convolucional (CNN).
+      Ela leu 0,300 dos caracteres e
+      nenhuma placa inteira.</p>
+    <p>O problema não estava na CNN. Depois da binarização, os caracteres encostam uns
+      nos outros e na moldura, e a separação falha antes de a rede ver qualquer coisa.
+      Para testar essa hipótese, mantive a mesma CNN e troquei só a forma de localizar
+      os caracteres por um detector YOLO. Depois deixei o próprio YOLO dizer também
+      qual é o caractere.</p>
+  </div>
+
+  <div class="graficos">
+    <figure class="grafico">
+      <figcaption>Caracteres lidos corretamente, nas 30 placas</figcaption>
+      <ul class="barras">
+        <li class="barra">
+          <span class="barra__nome">Segmentação clássica + CNN</span>
+          <span class="barra__trilho"><span class="barra__valor" style="--v: 0.3"
+                title="Segmentação clássica + CNN: 0,300"></span><span class="barra__meta" style="--v: 0.95"></span></span>
+          <span class="barra__numero">0,300</span>
+        </li>
+        <li class="barra">
+          <span class="barra__nome">YOLO acha as caixas + a mesma CNN</span>
+          <span class="barra__trilho"><span class="barra__valor" style="--v: 0.619"
+                title="YOLO acha as caixas + a mesma CNN: 0,619"></span><span class="barra__meta" style="--v: 0.95"></span></span>
+          <span class="barra__numero">0,619</span>
+        </li>
+        <li class="barra barra--final">
+          <span class="barra__nome">YOLO acha e classifica (rota final)</span>
+          <span class="barra__trilho"><span class="barra__valor" style="--v: 0.719"
+                title="YOLO acha e classifica (rota final): 0,719"></span><span class="barra__meta" style="--v: 0.95"></span></span>
+          <span class="barra__numero">0,719</span>
+        </li>
+      </ul>
+      <p class="grafico__nota">A linha vertical marca a meta do projeto, 0,95.</p>
+    </figure>
+    <figure class="grafico">
+      <figcaption>Placas inteiras lidas corretamente</figcaption>
+      <ul class="barras">
+        <li class="barra">
+          <span class="barra__nome">Segmentação clássica + CNN</span>
+          <span class="barra__trilho"><span class="barra__valor" style="--v: 0.0"
+                title="Segmentação clássica + CNN: 0,000"></span><span class="barra__meta" style="--v: 0.80"></span></span>
+          <span class="barra__numero">0,000</span>
+        </li>
+        <li class="barra">
+          <span class="barra__nome">YOLO acha as caixas + a mesma CNN</span>
+          <span class="barra__trilho"><span class="barra__valor" style="--v: 0.2333"
+                title="YOLO acha as caixas + a mesma CNN: 0,233"></span><span class="barra__meta" style="--v: 0.80"></span></span>
+          <span class="barra__numero">0,233</span>
+        </li>
+        <li class="barra barra--final">
+          <span class="barra__nome">YOLO acha e classifica (rota final)</span>
+          <span class="barra__trilho"><span class="barra__valor" style="--v: 0.3333"
+                title="YOLO acha e classifica (rota final): 0,333"></span><span class="barra__meta" style="--v: 0.80"></span></span>
+          <span class="barra__numero">0,333</span>
+        </li>
+      </ul>
+      <p class="grafico__nota">A linha vertical marca a meta do projeto, 0,80.</p>
+    </figure>
+  </div>
+  <p class="texto">Com a mesma CNN, só trocar a localização levou os caracteres certos
+    de 0,300 para 0,619. A rota final, em que o YOLO faz as duas coisas, ficou com
+    72% dos caracteres. O código manteve só essa rota.</p>
+</section>
+
+<section class="secao" aria-labelledby="erra">
+  <h2 id="erra">Onde ainda erra</h2>
+  <p class="secao__intro">Em quantas das 30 placas cada posição sai
+    errada. As posições 4 e 6 são as que mais erram.</p>
+  <figure class="posicoes">
+    <div class="posicoes__colunas">
+      <div class="posicao"
+           title="Posição 1: 5 placas erradas (8 sem a regra)">
+        <span class="posicao__numero">5</span>
+        <span class="posicao__barra" style="--v: 0.45454545454545453"></span>
+        <span class="posicao__casa">1</span>
+        <span class="posicao__mascara">L</span>
+        <span class="posicao__sem">8</span>
+      </div>
+      <div class="posicao"
+           title="Posição 2: 9 placas erradas (11 sem a regra)">
+        <span class="posicao__numero">9</span>
+        <span class="posicao__barra" style="--v: 0.8181818181818182"></span>
+        <span class="posicao__casa">2</span>
+        <span class="posicao__mascara">L</span>
+        <span class="posicao__sem">11</span>
+      </div>
+      <div class="posicao"
+           title="Posição 3: 9 placas erradas (11 sem a regra)">
+        <span class="posicao__numero">9</span>
+        <span class="posicao__barra" style="--v: 0.8181818181818182"></span>
+        <span class="posicao__casa">3</span>
+        <span class="posicao__mascara">L</span>
+        <span class="posicao__sem">11</span>
+      </div>
+      <div class="posicao posicao--pior"
+           title="Posição 4: 11 placas erradas (16 sem a regra)">
+        <span class="posicao__numero">11</span>
+        <span class="posicao__barra" style="--v: 1.0"></span>
+        <span class="posicao__casa">4</span>
+        <span class="posicao__mascara">D</span>
+        <span class="posicao__sem">16</span>
+      </div>
+      <div class="posicao"
+           title="Posição 5: 10 placas erradas (14 sem a regra)">
+        <span class="posicao__numero">10</span>
+        <span class="posicao__barra" style="--v: 0.9090909090909091"></span>
+        <span class="posicao__casa">5</span>
+        <span class="posicao__mascara">L</span>
+        <span class="posicao__sem">14</span>
+      </div>
+      <div class="posicao posicao--pior"
+           title="Posição 6: 11 placas erradas (13 sem a regra)">
+        <span class="posicao__numero">11</span>
+        <span class="posicao__barra" style="--v: 1.0"></span>
+        <span class="posicao__casa">6</span>
+        <span class="posicao__mascara">D</span>
+        <span class="posicao__sem">13</span>
+      </div>
+      <div class="posicao"
+           title="Posição 7: 4 placas erradas (7 sem a regra)">
+        <span class="posicao__numero">4</span>
+        <span class="posicao__barra" style="--v: 0.36363636363636365"></span>
+        <span class="posicao__casa">7</span>
+        <span class="posicao__mascara">D</span>
+        <span class="posicao__sem">7</span>
+      </div>
+    </div>
+    <figcaption class="posicoes__legenda">Abaixo de cada coluna: a posição na placa, se
+      ela leva letra (L) ou dígito (D) no formato Mercosul e, em cinza, quantos erros
+      havia antes da regra do formato.</figcaption>
+  </figure>
+  <p class="texto">A regra do formato reduziu os erros de 80
+    para 59, somando todas as posições, sem nenhum treino a mais.
+    O que sobra são trocas entre formas parecidas, como 9 e 5, e placas em que o
+    formato (Mercosul ou antigo) foi identificado errado, o que faz a regra trocar
+    o caractere certo pelo errado.</p>
+</section>
+
+<section class="secao secao--limites" aria-labelledby="limites">
+  <h2 id="limites">Limites e próximos passos</h2>
+  <div class="texto">
+    <p>Hoje o sistema lê corretamente <strong>10 de
+      30 placas</strong> (0,333) e
+      0,719 dos caracteres. As metas do projeto eram 0,80 e 0,95, e
+      ainda não foram atingidas.</p>
+    <p>Três cuidados ao ler esses números. Com 30 placas, cada uma
+      vale 3,3 pontos de acurácia, então a medida ainda é grosseira.
+      As placas foram escolhidas entre as maiores e mais legíveis, e não representam
+      fotos noturnas ou placas muito pequenas. E o gabarito foi transcrito à mão, sem
+      usar a regra do formato, para não inflar o resultado.</p>
+    <p>O sistema já sabe quando não sabe. Com o limiar de confiança em 0,70,
+      <strong>nenhum dos 20 erros</strong> sairia como resposta final:
+      todos iriam para revisão manual. O custo é que só 2
+      dos 10 acertos são liberados. O limiar está conservador demais.</p>
+  </div>
+  <h3>Em andamento</h3>
+  <ul class="proximos">
+    <li><a href="https://github.com/RLmagalhaes/alpr-mercosul-PAI-project/issues/6">#6</a> Ampliar o gabarito de 30 para 100 a 200 placas, para que cada placa pese menos de 1 ponto na acurácia.</li>
+    <li><a href="https://github.com/RLmagalhaes/alpr-mercosul-PAI-project/issues/4">#4</a> Recalibrar o limiar de revisão manual, para liberar mais acertos sem deixar passar erros.</li>
+    <li><a href="https://github.com/RLmagalhaes/alpr-mercosul-PAI-project/issues/3">#3</a> Corrigir a perspectiva da placa antes de ler os caracteres.</li>
+    <li><a href="https://github.com/RLmagalhaes/alpr-mercosul-PAI-project/issues/5">#5</a> Tornar mais robusta a detecção do formato (Mercosul ou antigo).</li>
+    <li><a href="https://github.com/RLmagalhaes/alpr-mercosul-PAI-project/issues/2">#2</a> Ler placas de moto, que têm o texto em duas linhas.</li>
+    <li><a href="https://github.com/RLmagalhaes/alpr-mercosul-PAI-project/issues/9">#9</a> Deixar o visitante testar o modelo com a própria foto, no navegador.</li>
+  </ul>
+</section>
+
+<section class="secao" aria-labelledby="privacidade">
+  <h2 id="privacidade">Privacidade e uso responsável</h2>
+  <div class="texto">
+    <p>A placa pode identificar uma pessoa de forma indireta. Este é um projeto
+      acadêmico, sem finalidade de vigilância. Ele usa só bases públicas, nenhuma foto
+      foi tirada por mim, e o sistema devolve apenas o texto da placa: não consulta,
+      guarda nem cruza dados sobre dono, veículo ou local.</p>
+    <p>Com a acurácia atual, ele não deve ser usado para decisões automáticas sobre
+      pessoas.</p>
+  </div>
+</section>
+
+<section class="secao sobre" aria-labelledby="autor">
+  <h2 id="autor">Quem fez</h2>
+  <div class="texto">
+    <p>Sou Raphael Magalhães e faço pós-graduação em IA Generativa e LLM. Este projeto
+      nasceu como trabalho final da disciplina de Processamento e Análise de Imagens e
+      continua em evolução.</p>
+  </div>
+  <ul class="links">
+    <li><a href="https://github.com/RLmagalhaes/alpr-mercosul-PAI-project">Código e relatório no GitHub</a></li>
+    <li><a href="https://www.linkedin.com/in/raphaellm/">LinkedIn</a></li>
+    <li><a href="https://github.com/RLmagalhaes">Outros projetos no GitHub</a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer class="rodape">
+  <p>Fotos da base <a href="https://universe.roboflow.com/trafficbr/vehicle-plate-color">vehicle-plate-color</a>
+    (trafficbr, Roboflow Universe), licença CC BY 4.0, com as marcações do sistema
+    desenhadas por cima. Caracteres treinados com a base
+    <a href="https://universe.roboflow.com/project-swcsj/license-plate-character-extraction">license-plate-character-extraction</a>
+    (licença MIT). Todos os números desta página são gerados por
+    <a href="https://github.com/RLmagalhaes/alpr-mercosul-PAI-project/blob/master/scripts/site/gerar.py">scripts/site/gerar.py</a>
+    a partir das tabelas do repositório.</p>
+</footer>
+
+</body>
+</html>

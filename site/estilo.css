@@ -1,0 +1,427 @@
+/* Estilo da página de estudo de caso. Copiado para site/ por scripts/site/gerar.py. */
+
+:root {
+  --papel: #f3f5f8;        /* fundo, cinza-azulado frio */
+  --branco: #ffffff;
+  --tinta: #17202c;        /* texto principal */
+  --tinta-2: #4f5a69;      /* texto secundário */
+  --linha: #d3d9e1;
+  --azul: #003399;         /* faixa da placa Mercosul */
+  --azul-claro: #dfe6f5;
+  --erro: #a8231c;
+  --placa-antiga: #c7ccd3;
+
+  --serifa: "Source Serif 4", Georgia, serif;
+  --condensada: "Barlow Condensed", "Arial Narrow", sans-serif;
+
+  --largura: 70rem;
+  --texto: 38rem;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--serifa);
+  font-size: 1.125rem;
+  line-height: 1.6;
+}
+
+img { display: block; max-width: 100%; height: auto; }
+
+a { color: var(--azul); text-underline-offset: 0.18em; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 3px solid var(--azul); outline-offset: 3px; }
+
+h1, h2, h3 {
+  font-family: var(--condensada);
+  font-weight: 600;
+  line-height: 1.05;
+  margin: 0;
+}
+
+h1 { font-size: clamp(2.8rem, 6.5vw, 5rem); letter-spacing: -0.01em; }
+h2 { font-size: clamp(2rem, 4vw, 2.75rem); margin-bottom: 0.75rem; }
+h3 { font-size: 1.5rem; }
+
+p { margin: 0 0 1em; }
+
+.cod { font-family: var(--condensada); font-weight: 600; letter-spacing: 0.06em; }
+
+/* ---------- topo ---------- */
+
+.topo {
+  max-width: var(--largura);
+  margin: 0 auto;
+  padding: clamp(2.5rem, 7vw, 6rem) 1.5rem clamp(3rem, 6vw, 5rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: clamp(2rem, 5vw, 4.5rem);
+  align-items: center;
+}
+
+.assinatura {
+  font-family: var(--condensada);
+  font-size: 1.25rem;
+  color: var(--tinta-2);
+  margin-bottom: 1.25rem;
+}
+
+.abertura { font-size: 1.3rem; max-width: var(--texto); margin-top: 1.5rem; }
+
+.fato {
+  max-width: var(--texto);
+  color: var(--tinta-2);
+  border-left: 3px solid var(--azul);
+  padding-left: 1rem;
+}
+.fato strong { color: var(--tinta); }
+
+.topo__demo { margin: 0; }
+.topo__demo img { border-radius: 6px; }
+.topo__demo figcaption {
+  /* a placa sobe sobre a foto: é a saída do sistema "em cima" da entrada */
+  margin-top: -3.5rem;
+  margin-left: 1.5rem;
+  position: relative;
+}
+.legenda {
+  display: block;
+  margin-top: 0.6rem;
+  font-size: 0.95rem;
+  color: var(--tinta-2);
+}
+
+/* ---------- a placa desenhada ---------- */
+
+.placa {
+  --altura: 4.2rem;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  background: var(--branco);
+  border: 2px solid var(--tinta);
+  border-radius: 7px;
+  overflow: hidden;
+  box-shadow: 0 1px 0 var(--linha);
+  min-width: 12rem;
+}
+
+.placa__faixa {
+  background: var(--azul);
+  color: var(--branco);
+  font-family: var(--condensada);
+  font-weight: 600;
+  font-size: calc(var(--altura) * 0.2);
+  letter-spacing: 0.3em;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.placa--antiga { background: var(--placa-antiga); }
+
+.placa__texto {
+  display: flex;
+  justify-content: center;
+  padding: 0.1em 0.5em 0.05em;
+  font-family: var(--condensada);
+  font-weight: 600;
+  font-size: var(--altura);
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+}
+
+.placa__casa { min-width: 0.52em; text-align: center; }
+.placa__casa--errada {
+  color: var(--erro);
+  text-decoration: underline;
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.08em;
+}
+.placa__casa--vazia { color: var(--tinta-2); opacity: 0.45; }
+.placa__hifen { padding: 0 0.08em; }
+
+.placa--grande { --altura: clamp(3.4rem, 7vw, 5.2rem); }
+
+/* ---------- seções ---------- */
+
+main { background: var(--branco); }
+
+.secao {
+  max-width: var(--largura);
+  margin: 0 auto;
+  padding: clamp(3rem, 7vw, 5.5rem) 1.5rem;
+  border-top: 1px solid var(--linha);
+}
+.secao:first-child { border-top: 0; }
+
+.secao__intro, .texto { max-width: var(--texto); }
+.secao__intro { color: var(--tinta-2); margin-bottom: 2.5rem; }
+
+/* ---------- etapas (é uma sequência, por isso numerada) ---------- */
+
+.etapas {
+  list-style: none;
+  counter-reset: etapa;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2rem 1.75rem;
+}
+
+.etapa { counter-increment: etapa; display: flex; flex-direction: column; }
+.etapa > img, .etapa > .placa, .etapa__mascara {
+  height: 10rem;
+  width: 100%;
+  margin-bottom: 1.25rem;
+}
+.etapa > img {
+  object-fit: cover;
+  object-position: center 70%;   /* a placa fica na metade de baixo da foto */
+  border-radius: 6px;
+  background: var(--papel);
+}
+.etapa > img[src*="recorte"] { object-fit: contain; }
+.etapa > .placa { --altura: 3.1rem; min-width: 0; justify-content: center; }
+
+.etapa h3::before {
+  content: counter(etapa);
+  display: inline-block;
+  min-width: 1.5em;
+  color: var(--azul);
+}
+.etapa p { font-size: 1rem; color: var(--tinta-2); margin-top: 0.5rem; }
+
+.etapa__mascara {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  background: var(--papel);
+  border-radius: 6px;
+  font-family: var(--condensada);
+  font-weight: 600;
+  font-size: 1.6rem;
+}
+.etapa__mascara span {
+  width: 1.7rem;
+  text-align: center;
+  border-bottom: 3px solid var(--tinta-2);
+}
+.etapa__mascara span:nth-child(4),
+.etapa__mascara span:nth-child(6),
+.etapa__mascara span:nth-child(7) { border-color: var(--azul); color: var(--azul); }
+
+/* ---------- galeria ---------- */
+
+.galeria {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3.5rem 2.5rem;
+}
+
+.exemplo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  grid-template-areas:
+    "foto    recorte"
+    "foto    leitura"
+    "motivo  motivo"
+    "dados   dados";
+  gap: 0.9rem 1.1rem;
+  align-items: start;
+}
+.exemplo__foto { grid-area: foto; border-radius: 6px; }
+.exemplo__recorte { grid-area: recorte; border-radius: 4px; width: 100%; }
+.exemplo__leitura { grid-area: leitura; }
+.exemplo__leitura .placa { --altura: 2.4rem; min-width: 0; }
+.exemplo__motivo { grid-area: motivo; margin: 0; font-size: 1rem; }
+
+.veredito {
+  margin: 0.55rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--azul);
+}
+.exemplo--erro .veredito { color: var(--erro); }
+.veredito__icone { display: inline-block; width: 1.1em; }
+
+.exemplo__dados {
+  grid-area: dados;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  font-size: 0.9rem;
+  color: var(--tinta-2);
+}
+.exemplo__dados div { display: flex; gap: 0.4rem; }
+.exemplo__dados dt::after { content: ":"; }
+.exemplo__dados dd { margin: 0; color: var(--tinta); }
+
+/* ---------- gráficos de barras (HTML puro, valores sempre visíveis) ---------- */
+
+.graficos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2.5rem;
+  margin: 2.5rem 0;
+}
+
+.grafico { margin: 0; }
+.grafico figcaption {
+  font-family: var(--condensada);
+  font-weight: 600;
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+}
+.grafico__nota { font-size: 0.85rem; color: var(--tinta-2); margin-top: 0.75rem; }
+
+.barras { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+
+.barra {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3.2rem;
+  grid-template-areas: "nome nome" "trilho numero";
+  gap: 0.25rem 0.75rem;
+  align-items: center;
+}
+.barra__nome { grid-area: nome; font-size: 0.95rem; color: var(--tinta-2); }
+.barra--final .barra__nome { color: var(--tinta); font-weight: 600; }
+.barra__trilho {
+  grid-area: trilho;
+  position: relative;
+  height: 0.9rem;
+  background: var(--papel);
+  border-radius: 0 4px 4px 0;
+}
+.barra__valor {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--v) * 100%);
+  background: #8ea3d1;
+  border-radius: 0 4px 4px 0;
+}
+.barra--final .barra__valor { background: var(--azul); }
+.barra__meta {
+  position: absolute;
+  left: calc(var(--v) * 100%);
+  top: -0.3rem;
+  bottom: -0.3rem;
+  width: 2px;
+  background: var(--tinta);
+}
+.barra__numero {
+  grid-area: numero;
+  font-family: var(--condensada);
+  font-weight: 600;
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- erros por posição, alinhados às casas da placa ---------- */
+
+.posicoes { margin: 0 0 2rem; max-width: 40rem; }
+
+.posicoes__colunas {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.posicao {
+  display: grid;
+  grid-template-rows: auto 9rem auto auto auto;
+  justify-items: center;
+  font-family: var(--condensada);
+  font-weight: 600;
+}
+.posicao__numero { font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+.posicao__barra {
+  align-self: end;
+  width: 70%;
+  height: calc(var(--v) * 100%);
+  background: #8ea3d1;
+  border-radius: 4px 4px 0 0;
+}
+.posicao--pior .posicao__barra { background: var(--azul); }
+.posicao__casa {
+  width: 100%;
+  text-align: center;
+  font-size: 1.9rem;
+  border-top: 2px solid var(--tinta);
+  padding-top: 0.2rem;
+}
+.posicao__mascara { color: var(--tinta-2); font-size: 1.05rem; }
+.posicao__sem { color: var(--tinta-2); font-weight: 500; font-size: 1rem; }
+
+.posicoes__legenda {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: var(--tinta-2);
+}
+
+/* ---------- limites ---------- */
+
+.secao--limites h3 { margin: 2.5rem 0 1rem; }
+
+.proximos { list-style: none; margin: 0; padding: 0; max-width: var(--texto); }
+.proximos li {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--linha);
+  font-size: 1rem;
+}
+.proximos a {
+  display: inline-block;
+  min-width: 2.6rem;
+  font-family: var(--condensada);
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+/* ---------- autor e rodapé ---------- */
+
+.links {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+  font-family: var(--condensada);
+  font-weight: 600;
+  font-size: 1.35rem;
+}
+
+.rodape {
+  max-width: var(--largura);
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 3rem;
+  font-size: 0.85rem;
+  color: var(--tinta-2);
+}
+.rodape p { max-width: 52rem; }
+
+/* ---------- telas menores ---------- */
+
+@media (max-width: 60rem) {
+  .topo { grid-template-columns: 1fr; }
+  .etapas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .galeria, .graficos { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 34rem) {
+  body { font-size: 1.05rem; }
+  .etapas { grid-template-columns: 1fr; }
+  .exemplo {
+    grid-template-columns: 1fr;
+    grid-template-areas: "foto" "recorte" "leitura" "motivo" "dados";
+  }
+  .topo__demo figcaption { margin-left: 0.75rem; }
+}

@@ -1,0 +1,269 @@
+{#- Template da página. Gerado por scripts/site/gerar.py; não edite site/index.html à mão. -#}
+{%- macro desenhar_placa(casas, layout, tamanho="") -%}
+<div class="placa placa--{{ layout }} {{ tamanho }}" role="img"
+     aria-label="Placa lida: {{ casas | map(attribute='c') | join('') or 'nenhum caractere' }}">
+  {%- if layout == "mercosul" %}<span class="placa__faixa" aria-hidden="true">BRASIL</span>{% endif %}
+  <span class="placa__texto" aria-hidden="true">
+    {%- for casa in casas -%}
+      {%- if layout == "antiga" and loop.index0 == 3 %}<span class="placa__hifen">-</span>{% endif -%}
+      <span class="placa__casa{% if casa.errada %} placa__casa--errada{% endif %}{% if not casa.c %} placa__casa--vazia{% endif %}">{{ casa.c or "·" }}</span>
+    {%- endfor -%}
+  </span>
+</div>
+{%- endmacro -%}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Leitura de placas Mercosul com visão computacional · Raphael Magalhães</title>
+  <meta name="description" content="Estudo de caso: um sistema que encontra a placa na foto de um veículo e lê os sete caracteres. Método, resultados e limites.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+<header class="topo">
+  <div class="topo__texto">
+    <p class="assinatura">Estudo de caso · Raphael Magalhães</p>
+    <h1>Da foto do carro ao texto da placa</h1>
+    <p class="abertura">Um sistema de visão computacional que encontra a placa na foto de
+      um veículo e lê os sete caracteres. Esta página conta como ele foi construído, o
+      que já funciona bem e o que ainda falha.</p>
+    <p class="fato">Nas {{ det.n_teste }} fotos de teste, o detector encontra
+      <strong>{{ det.recall }} das placas</strong>, e {{ det.precisao }} do que ele marca é
+      de fato uma placa (mAP@0,5 de {{ det.map50 }}).</p>
+  </div>
+  <figure class="topo__demo">
+    <img src="{{ destaque.foto }}"
+         alt="Carro fotografado em ângulo, com a placa marcada por um retângulo azul">
+    <figcaption>
+      {{ desenhar_placa(destaque.casas, destaque.layout, "placa--grande") }}
+      <span class="legenda">Leitura feita pelo sistema nesta foto.</span>
+    </figcaption>
+  </figure>
+</header>
+
+<main>
+
+<section class="secao" aria-labelledby="como">
+  <h2 id="como">Como funciona</h2>
+  <p class="secao__intro">A leitura acontece em quatro etapas. Cada uma resolve um
+    problema menor e passa o resultado adiante.</p>
+  <ol class="etapas">
+    <li class="etapa">
+      <img src="{{ etapas.foto }}" loading="lazy"
+           alt="Frente de um carro com a placa marcada por um retângulo azul">
+      <h3>Achar a placa</h3>
+      <p>Um detector YOLO, treinado em {{ det.n_treino }} fotos de veículos brasileiros,
+        marca onde está a placa.</p>
+    </li>
+    <li class="etapa">
+      <img src="{{ etapas.recorte }}" loading="lazy"
+           alt="Recorte da placa com um retângulo azul em volta de cada caractere">
+      <h3>Recortar e achar os caracteres</h3>
+      <p>A placa é recortada com 8% de folga, e um segundo YOLO localiza cada caractere
+        e já diz qual é (mAP@0,5 de {{ det.chars_map50 }} em {{ det.chars_n_teste }}
+        imagens de teste).</p>
+    </li>
+    <li class="etapa">
+      <div class="etapa__mascara" aria-hidden="true">
+        <span>L</span><span>L</span><span>L</span><span>D</span><span>L</span><span>D</span><span>D</span>
+      </div>
+      <h3>Aplicar a regra do formato</h3>
+      <p>Na placa Mercosul, cada posição só aceita letra (L) ou dígito (D). Um 0 lido
+        onde deveria haver letra vira O, e um I onde deveria haver número vira 1.</p>
+    </li>
+    <li class="etapa">
+      {{ desenhar_placa(etapas.casas, etapas.layout) }}
+      <h3>Devolver o texto, ou pedir revisão</h3>
+      <p>Se faltar caractere ou a confiança for baixa, o sistema não arrisca: devolve
+        <em>revisão manual</em>.</p>
+    </li>
+  </ol>
+</section>
+
+<section class="secao" aria-labelledby="galeria">
+  <h2 id="galeria">Exemplos</h2>
+  <p class="secao__intro">{{ n_acertos_galeria }} acertos e {{ n_erros_galeria }} erros,
+    escolhidos para ilustrar. Os números completos, das {{ leitor.n_placas }} placas
+    avaliadas, estão nas seções seguintes.</p>
+  <div class="galeria">
+    {%- for e in galeria %}
+    <article class="exemplo{% if not e.acertou %} exemplo--erro{% endif %}">
+      <img class="exemplo__foto" src="{{ e.foto }}" loading="lazy"
+           alt="Veículo com a placa marcada pelo sistema">
+      <img class="exemplo__recorte" src="{{ e.recorte }}" loading="lazy"
+           alt="Recorte da placa com os caracteres encontrados">
+      <div class="exemplo__leitura">
+        {{ desenhar_placa(e.casas, e.layout) }}
+        <p class="veredito">
+          {%- if e.acertou %}<span class="veredito__icone" aria-hidden="true">✓</span> Leitura correta
+          {%- else %}<span class="veredito__icone" aria-hidden="true">✕</span> Leitura errada; o certo é <span class="cod">{{ e.real }}</span>
+          {%- endif %}</p>
+      </div>
+      <p class="exemplo__motivo">{{ e.motivo }}</p>
+      <dl class="exemplo__dados">
+        {%- if e.regra_corrigiu %}
+        <div><dt>Antes da regra</dt><dd class="cod">{{ e.sem_regra }}</dd></div>
+        {%- endif %}
+        <div><dt>Caracteres achados</dt><dd>{{ e.n_caracteres }} de 7</dd></div>
+        <div><dt>Menor confiança</dt><dd>{{ e.conf }}</dd></div>
+        <div><dt>Saída</dt><dd>{% if e.liberada %}liberada{% else %}revisão manual{% endif %}</dd></div>
+      </dl>
+    </article>
+    {%- endfor %}
+  </div>
+</section>
+
+<section class="secao" aria-labelledby="virada">
+  <h2 id="virada">O gargalo era a segmentação</h2>
+  <div class="texto">
+    <p>A primeira versão seguia o caminho clássico: binarizar a placa, separar os
+      caracteres como manchas e classificar cada uma com uma rede convolucional (CNN).
+      Ela leu {{ rotas[0].car_txt }} dos caracteres e
+      {% if rotas[0].placa == 0 %}nenhuma placa inteira{% else %}{{ rotas[0].placa_txt }} das placas{% endif %}.</p>
+    <p>O problema não estava na CNN. Depois da binarização, os caracteres encostam uns
+      nos outros e na moldura, e a separação falha antes de a rede ver qualquer coisa.
+      Para testar essa hipótese, mantive a mesma CNN e troquei só a forma de localizar
+      os caracteres por um detector YOLO. Depois deixei o próprio YOLO dizer também
+      qual é o caractere.</p>
+  </div>
+
+  <div class="graficos">
+    <figure class="grafico">
+      <figcaption>Caracteres lidos corretamente, nas {{ leitor.n_placas }} placas</figcaption>
+      <ul class="barras">
+        {%- for r in rotas %}
+        <li class="barra{% if r.final %} barra--final{% endif %}">
+          <span class="barra__nome">{{ r.nome }}</span>
+          <span class="barra__trilho"><span class="barra__valor" style="--v: {{ r.car }}"
+                title="{{ r.nome }}: {{ r.car_txt }}"></span><span class="barra__meta" style="--v: 0.95"></span></span>
+          <span class="barra__numero">{{ r.car_txt }}</span>
+        </li>
+        {%- endfor %}
+      </ul>
+      <p class="grafico__nota">A linha vertical marca a meta do projeto, 0,95.</p>
+    </figure>
+    <figure class="grafico">
+      <figcaption>Placas inteiras lidas corretamente</figcaption>
+      <ul class="barras">
+        {%- for r in rotas %}
+        <li class="barra{% if r.final %} barra--final{% endif %}">
+          <span class="barra__nome">{{ r.nome }}</span>
+          <span class="barra__trilho"><span class="barra__valor" style="--v: {{ r.placa }}"
+                title="{{ r.nome }}: {{ r.placa_txt }}"></span><span class="barra__meta" style="--v: 0.80"></span></span>
+          <span class="barra__numero">{{ r.placa_txt }}</span>
+        </li>
+        {%- endfor %}
+      </ul>
+      <p class="grafico__nota">A linha vertical marca a meta do projeto, 0,80.</p>
+    </figure>
+  </div>
+  <p class="texto">Com a mesma CNN, só trocar a localização levou os caracteres certos
+    de {{ rotas[0].car_txt }} para {{ rotas[1].car_txt }}. A rota final, em que o YOLO faz as duas coisas, ficou com
+    {{ leitor.acc_car_pct }} dos caracteres. O código manteve só essa rota.</p>
+</section>
+
+<section class="secao" aria-labelledby="erra">
+  <h2 id="erra">Onde ainda erra</h2>
+  <p class="secao__intro">Em quantas das {{ leitor.n_placas }} placas cada posição sai
+    errada. As posições {{ posicoes.piores }} são as que mais erram.</p>
+  <figure class="posicoes">
+    <div class="posicoes__colunas">
+      {%- for p in posicoes.posicoes %}
+      <div class="posicao{% if p.pior %} posicao--pior{% endif %}"
+           title="Posição {{ p.pos }}: {{ p.com }} placas erradas ({{ p.sem }} sem a regra)">
+        <span class="posicao__numero">{{ p.com }}</span>
+        <span class="posicao__barra" style="--v: {{ p.altura }}"></span>
+        <span class="posicao__casa">{{ p.pos }}</span>
+        <span class="posicao__mascara">{{ p.mercosul }}</span>
+        <span class="posicao__sem">{{ p.sem }}</span>
+      </div>
+      {%- endfor %}
+    </div>
+    <figcaption class="posicoes__legenda">Abaixo de cada coluna: a posição na placa, se
+      ela leva letra (L) ou dígito (D) no formato Mercosul e, em cinza, quantos erros
+      havia antes da regra do formato.</figcaption>
+  </figure>
+  <p class="texto">A regra do formato reduziu os erros de {{ posicoes.total_sem }}
+    para {{ posicoes.total_com }}, somando todas as posições, sem nenhum treino a mais.
+    O que sobra são trocas entre formas parecidas, como 9 e 5, e placas em que o
+    formato (Mercosul ou antigo) foi identificado errado, o que faz a regra trocar
+    o caractere certo pelo errado.</p>
+</section>
+
+<section class="secao secao--limites" aria-labelledby="limites">
+  <h2 id="limites">Limites e próximos passos</h2>
+  <div class="texto">
+    <p>Hoje o sistema lê corretamente <strong>{{ leitor.acertos }} de
+      {{ leitor.n_placas }} placas</strong> ({{ leitor.acc_placa }}) e
+      {{ leitor.acc_car }} dos caracteres. As metas do projeto eram 0,80 e 0,95, e
+      ainda não foram atingidas.</p>
+    <p>Três cuidados ao ler esses números. Com {{ leitor.n_placas }} placas, cada uma
+      vale {{ leitor.peso_placa }} pontos de acurácia, então a medida ainda é grosseira.
+      As placas foram escolhidas entre as maiores e mais legíveis, e não representam
+      fotos noturnas ou placas muito pequenas. E o gabarito foi transcrito à mão, sem
+      usar a regra do formato, para não inflar o resultado.</p>
+    {%- if leitor.erros_liberados == 0 %}
+    <p>O sistema já sabe quando não sabe. Com o limiar de confiança em {{ leitor.limiar }},
+      <strong>nenhum dos {{ leitor.erros }} erros</strong> sairia como resposta final:
+      todos iriam para revisão manual. O custo é que só {{ leitor.acertos_liberados }}
+      dos {{ leitor.acertos }} acertos são liberados. O limiar está conservador demais.</p>
+    {%- else %}
+    <p>Com o limiar de confiança em {{ leitor.limiar }}, {{ leitor.erros_liberados }} dos
+      {{ leitor.erros }} erros sairiam como resposta final, e os demais iriam para
+      revisão manual. Dos {{ leitor.acertos }} acertos, {{ leitor.acertos_liberados }}
+      são liberados.</p>
+    {%- endif %}
+  </div>
+  <h3>Em andamento</h3>
+  <ul class="proximos">
+    {%- for numero, texto in proximos %}
+    <li><a href="{{ repo }}/issues/{{ numero }}">#{{ numero }}</a> {{ texto }}</li>
+    {%- endfor %}
+  </ul>
+</section>
+
+<section class="secao" aria-labelledby="privacidade">
+  <h2 id="privacidade">Privacidade e uso responsável</h2>
+  <div class="texto">
+    <p>A placa pode identificar uma pessoa de forma indireta. Este é um projeto
+      acadêmico, sem finalidade de vigilância. Ele usa só bases públicas, nenhuma foto
+      foi tirada por mim, e o sistema devolve apenas o texto da placa: não consulta,
+      guarda nem cruza dados sobre dono, veículo ou local.</p>
+    <p>Com a acurácia atual, ele não deve ser usado para decisões automáticas sobre
+      pessoas.</p>
+  </div>
+</section>
+
+<section class="secao sobre" aria-labelledby="autor">
+  <h2 id="autor">Quem fez</h2>
+  <div class="texto">
+    <p>Sou Raphael Magalhães e faço pós-graduação em IA Generativa e LLM. Este projeto
+      nasceu como trabalho final da disciplina de Processamento e Análise de Imagens e
+      continua em evolução.</p>
+  </div>
+  <ul class="links">
+    <li><a href="{{ repo }}">Código e relatório no GitHub</a></li>
+    <li><a href="https://www.linkedin.com/in/raphaellm/">LinkedIn</a></li>
+    <li><a href="https://github.com/RLmagalhaes">Outros projetos no GitHub</a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer class="rodape">
+  <p>Fotos da base <a href="https://universe.roboflow.com/trafficbr/vehicle-plate-color">vehicle-plate-color</a>
+    (trafficbr, Roboflow Universe), licença CC BY 4.0, com as marcações do sistema
+    desenhadas por cima. Caracteres treinados com a base
+    <a href="https://universe.roboflow.com/project-swcsj/license-plate-character-extraction">license-plate-character-extraction</a>
+    (licença MIT). Todos os números desta página são gerados por
+    <a href="{{ repo }}/blob/master/scripts/site/gerar.py">scripts/site/gerar.py</a>
+    a partir das tabelas do repositório.</p>
+</footer>
+
+</body>
+</html>

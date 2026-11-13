@@ -1,0 +1,40 @@
+# Publica a página de estudo de caso (pasta site/) no GitHub Pages.
+#
+# A página é gerada LOCALMENTE por scripts/site/gerar.py e versionada em site/;
+# este workflow só a publica, sem modelos nem GPU.
+#
+# Por enquanto roda só manualmente (aba Actions > "Publicar página" > Run workflow).
+# Quando a página for ao ar (depois da issue #7), ligue o Pages em
+# Settings > Pages > Source: GitHub Actions e descomente o gatilho `push`.
+
+name: Publicar página
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches: [master]
+  #   paths: ["site/**"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
