@@ -96,3 +96,14 @@ def test_erros_por_posicao_conta_placa_nao_lida_em_todas_as_posicoes():
     # métricas discordavam sobre o mesmo caso
     assert erros_por_posicao(["ABC1D23"], [""]) == [1, 1, 1, 1, 1, 1, 1]
     assert acuracia_caractere(["ABC1D23"], [""]) == 0.0
+
+
+def test_erros_por_posicao_conta_casas_faltando_em_leitura_incompleta():
+    # Leitura com 1 de 7 caracteres: as 6 casas sem leitura são erros, como em
+    # acuracia_caractere. Antes só a primeira posição entrava na contagem.
+    assert erros_por_posicao(["JRV2727"], ["1"]) == [1, 1, 1, 1, 1, 1, 1]
+    assert erros_por_posicao(["ABC1D23"], ["ABC"]) == [0, 0, 0, 1, 1, 1, 1]
+    # a soma dos erros por posição tem de bater com a acurácia por caractere
+    reais, previstas = ["ABC1D23", "JRV2727"], ["ABC1D20", "1"]
+    total_erros = sum(erros_por_posicao(reais, previstas))
+    assert total_erros == round((1 - acuracia_caractere(reais, previstas)) * 14)

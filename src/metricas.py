@@ -67,18 +67,14 @@ def erros_por_posicao(reais: Sequence[str], previstas: Sequence[str],
                       n_caracteres: int = 7):
     """Conta quantos erros ocorreram em cada uma das posições da placa.
 
-    Placa não lida (string vazia) conta como erro em TODAS as posições —
-    mesmo critério de `acuracia_caractere`. Antes esta função pulava as
-    predições vazias, então as duas métricas discordavam sobre o mesmo caso
-    e iam parar juntas no mesmo relatório.
+    Casa sem leitura conta como erro — placa não lida (string vazia) erra em
+    TODAS as posições, e uma leitura incompleta erra nas casas que faltam.
+    É o mesmo critério de `acuracia_caractere`, então a soma desta contagem
+    bate com (1 - acurácia por caractere) x total de caracteres.
     """
     contagem = [0] * n_caracteres
     for real, prev in zip(reais, previstas):
-        if not prev:
-            for i in range(min(n_caracteres, len(real))):
-                contagem[i] += 1
-            continue
-        for i, (a, b) in enumerate(zip(real, prev)):
-            if i < n_caracteres and a != b:
+        for i in range(min(n_caracteres, len(real))):
+            if i >= len(prev) or real[i] != prev[i]:
                 contagem[i] += 1
     return contagem

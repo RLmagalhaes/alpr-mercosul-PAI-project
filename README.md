@@ -74,11 +74,17 @@ em GPU. É preciso ter uma chave própria, fornecida em `ROBOFLOW_API_KEY`.
 ├── scripts/
 │   ├── deteccao/        dados, treino e avaliação do detector de placas
 │   ├── caracteres/      dados, treino e avaliação do detector de caracteres
-│   └── leitor/          gabarito, avaliação fim a fim, limiar e figuras
+│   ├── leitor/          gabarito, avaliação fim a fim, limiar e figuras
+│   └── site/            gera a página de estudo de caso a partir das tabelas
 ├── tests/               testes das funções puras
 ├── resultados/          figuras e tabelas
+├── site/                a página gerada (não edite à mão)
 └── docs/                armadilhas, decisões e o arquivo do trabalho entregue
 ```
+
+Para regenerar a página, rode `scripts/site/preparar_galeria.py`, que precisa dos
+modelos, e depois `scripts/site/gerar.py`, que só lê as tabelas. Para vê-la, rode
+`python -m http.server -d site 8000`.
 
 O relatório completo está em [`docs/arquivo/RELATORIO.md`](docs/arquivo/RELATORIO.md).
 O que falta fazer está nas [issues](https://github.com/RLmagalhaes/alpr-mercosul-PAI-project/issues).
